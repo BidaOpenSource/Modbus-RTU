@@ -5,6 +5,7 @@
 #define MBUS_MAX_PACKET_LENGTH				256
 #define MBUS_MAX_PDU_HEADER_LENGTH			5
 #define MBUS_MAX_PDU_LENGTH					253
+#define MBUS_MAX_PDU_DATA_LENGTH			248
 #define MBUS_CRC_LENGTH						2
 
 #define MBUS_MAX_READ_DISCRETE_LENGTH		2048
@@ -75,11 +76,15 @@ void	MBusQueryWriteMultiple(MBusADU* ADU, unsigned short	regAddrStart,
 
 //		PARSE
 
-void	MBusDatagramParseResponse(	MBusADU* ADU,
-									unsigned char* data,
-									unsigned char		dataLength);
-void	MBusDatagramParseQuery(		MBusADU* ADU,
-									unsigned char* data,
-									unsigned char		dataLength);
+unsigned char	MBusDatagramHeaderAppend(	MBusADU* ADU,
+											unsigned char byte,
+											unsigned char byteIndex);
+unsigned char	MBusDatagramDataAppend(		MBusADU* ADU,
+											unsigned char byte,
+											unsigned int byteIndex);
+unsigned char	MBusDatagramCRCAppend(		MBusADU* ADU,
+											unsigned char byte,
+											unsigned int byteIndex);
+
 #endif
 

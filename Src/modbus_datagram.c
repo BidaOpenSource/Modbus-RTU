@@ -182,125 +182,46 @@ void	MBusQueryWriteMultiple(MBusADU* ADU, unsigned short	regAddrStart,
 		>> MBUS_JUNIOR_BIT_SHIFT;
 }
 
-static unsigned char MBusDatagramParseResponseHeader(MBusADU* ADU,
-	MBusFunction fnc,
-	unsigned char* headerData)
+unsigned char	MBusDatagramHeaderAppend(	MBusADU* ADU,
+											unsigned char byte,
+											unsigned char byteIndex)
 {
-	ADU->PDU.DataHeaderLength = 0;
-
-	if (fnc == READ_COILS ||
-		fnc == READ_DISCRETE_INPUTS ||
-		fnc == READ_HOLDING_REGISTERS ||
-		fnc == READ_INPUTS)
+	switch (ADU->PDU.FunctionCode)
 	{
+	case READ_COILS:
+	case READ_DISCRETE_INPUTS:
+	case READ_INPUTS:
+	case READ_HOLDING_REGISTERS:
 		ADU->PDU.DataHeaderLength = 1;
-		ADU->PDU.DataHeader[FREAD_RESP_BYTES_N] = headerData[FREAD_RESP_BYTES_N];
-	}
-
-	if (fnc == WRITE_SINGLE_COIL ||
-		fnc == WRITE_SINGLE_HOLDING_REGISTER ||
-		fnc == WRITE_MULTIPLE_COILS ||
-		fnc == WRITE_MULTIPLE_HOLDING_REGISTERS)
-	{
+		ADU->PDU.DataHeader[byteIndex] = byte;
+		return 1;
+	case WRITE_SINGLE_COIL:
+	case WRITE_SINGLE_HOLDING_REGISTER:
+	case WRITE_MULTIPLE_COILS:
+	case WRITE_MULTIPLE_HOLDING_REGISTERS:
 		ADU->PDU.DataHeaderLength = 4;
-		ADU->PDU.DataHeader[ADDR_H] = headerData[ADDR_H];
-		ADU->PDU.DataHeader[ADDR_L] = headerData[ADDR_L];
-		ADU->PDU.DataHeader[FWRITE_RESP_VAL_H] = headerData[FWRITE_RESP_VAL_H];
-		ADU->PDU.DataHeader[FWRITE_RESP_VAL_L] = headerData[FWRITE_RESP_VAL_L];
-	}
 
-	return ADU->PDU.DataHeaderLength;
+		ADU->PDU.DataHeader[byteIndex] = byte;
+
+		if (ADU->PDU.DataHeaderLength == byteIndex + 1) return 1;
+		return 0;
+	default:
+		return 1;
+	}
 }
-
-void	MBusDatagramParseResponse(MBusADU* ADU,
-	unsigned char*		data,
-	unsigned char		dataLength)
+unsigned char	MBusDatagramDataAppend(		MBusADU* ADU,
+											unsigned char byte,
+											unsigned int byteIndex)
 {
-	if (dataLength < MBUS_MIN_PACKET_LENGTH) return;
+	ADU->PDU.DataLength = byteIndex + 1;
+	ADU->PDU.Data[byteIndex] = byte;
 
-	ADU->SlaveAddress = data[ADDR_SLAVE];
-	ADU->PDU.FunctionCode = data[PDU_FNC_CODE];
-
-	unsigned char headerLength = MBusDatagramParseResponseHeader(ADU,
-		ADU->PDU.FunctionCode,
-		&data[PDU_DATA_START]);
-
-	ADU->PDU.DataLength = 0;
-	if (ADU->PDU.FunctionCode == READ_COILS ||
-		ADU->PDU.FunctionCode == READ_DISCRETE_INPUTS ||
-		ADU->PDU.FunctionCode == READ_HOLDING_REGISTERS ||
-		ADU->PDU.FunctionCode == READ_INPUTS)
-	{
-		ADU->PDU.DataLength = dataLength - ADU->PDU.DataHeaderLength - MBUS_CRC_LENGTH;
-		ADU->PDU.Data = &data[PDU_DATA_START + headerLength];
-	}
-
-	ADU->CRC16[CRC16_H] = (data[dataLength - MBUS_CRC_LENGTH + CRC16_H] << MBUS_SENIOR_BIT_SHIFT);
-	ADU->CRC16[CRC16_L] = (data[dataLength - MBUS_CRC_LENGTH + CRC16_L] << MBUS_JUNIOR_BIT_SHIFT);
+	return byteIndex >= MBUS_MAX_PDU_DATA_LENGTH;
 }
-
-static unsigned char MBusDatagramParseQueryHeader(MBusADU* ADU,
-	MBusFunction fnc,
-	unsigned char* headerData)
+unsigned char	MBusDatagramCRCAppend(		MBusADU* ADU,
+											unsigned char byte,
+											unsigned int byteIndex)
 {
-	ADU->PDU.DataHeaderLength = 0;
-
-	if (fnc == READ_COILS ||
-		fnc == READ_DISCRETE_INPUTS ||
-		fnc == READ_HOLDING_REGISTERS ||
-		fnc == READ_INPUTS)
-	{
-		ADU->PDU.DataHeaderLength = 4;
-		ADU->PDU.DataHeader[ADDR_H] = headerData[ADDR_H];
-		ADU->PDU.DataHeader[ADDR_L] = headerData[ADDR_L];
-		ADU->PDU.DataHeader[FREAD_REG_N_H] = headerData[FREAD_REG_N_H];
-		ADU->PDU.DataHeader[FREAD_REG_N_L] = headerData[FREAD_REG_N_L];
-	}
-
-	if (fnc == WRITE_SINGLE_COIL ||
-		fnc == WRITE_SINGLE_HOLDING_REGISTER)
-	{
-		ADU->PDU.DataHeaderLength = 4;
-		ADU->PDU.DataHeader[ADDR_H] = headerData[ADDR_H];
-		ADU->PDU.DataHeader[ADDR_L] = headerData[ADDR_L];
-		ADU->PDU.DataHeader[FWRITE_VAL_H] = headerData[FWRITE_VAL_H];
-		ADU->PDU.DataHeader[FWRITE_VAL_L] = headerData[FWRITE_VAL_L];
-	}
-
-	if (fnc == WRITE_MULTIPLE_COILS ||
-		fnc == WRITE_MULTIPLE_HOLDING_REGISTERS)
-	{
-		ADU->PDU.DataHeaderLength = 5;
-		ADU->PDU.DataHeader[ADDR_H] = headerData[ADDR_H];
-		ADU->PDU.DataHeader[ADDR_L] = headerData[ADDR_L];
-		ADU->PDU.DataHeader[FWRITE_M_REG_N_H] = headerData[FWRITE_M_REG_N_H];
-		ADU->PDU.DataHeader[FWRITE_M_REG_N_L] = headerData[FWRITE_M_REG_N_L];
-		ADU->PDU.DataHeader[FWRITE_M_BYTES_N] = headerData[FWRITE_M_BYTES_N];
-	}
-
-	return ADU->PDU.DataHeaderLength;
-}
-void	MBusDatagramParseQuery(MBusADU* ADU,
-	unsigned char* data,
-	unsigned char		dataLength)
-{
-	if (dataLength < MBUS_MIN_PACKET_LENGTH) return;
-
-	ADU->SlaveAddress = data[ADDR_SLAVE];
-	ADU->PDU.FunctionCode = data[PDU_FNC_CODE];
-
-	unsigned char headerLength = MBusDatagramParseQueryHeader(ADU,
-		ADU->PDU.FunctionCode,
-		&data[PDU_DATA_START]);
-
-	ADU->PDU.DataLength = 0;
-	if (ADU->PDU.FunctionCode == WRITE_MULTIPLE_COILS ||
-		ADU->PDU.FunctionCode == WRITE_MULTIPLE_HOLDING_REGISTERS)
-	{
-		ADU->PDU.DataLength = dataLength - ADU->PDU.DataHeaderLength - MBUS_CRC_LENGTH;
-		ADU->PDU.Data = &data[PDU_DATA_START + headerLength];
-	}
-
-	ADU->CRC16[CRC16_H] = (data[dataLength - MBUS_CRC_LENGTH + CRC16_H] << MBUS_SENIOR_BIT_SHIFT);
-	ADU->CRC16[CRC16_L] = (data[dataLength - MBUS_CRC_LENGTH + CRC16_L] << MBUS_JUNIOR_BIT_SHIFT);
+	ADU->CRC16[byteIndex] = byte;
+	return byteIndex >= MBUS_CRC_LENGTH;
 }

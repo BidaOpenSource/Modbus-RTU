@@ -33,7 +33,8 @@ typedef enum
 	MBUS_CH_ERR_UNEXPECTED,
 	MBUS_CH_ERR_WRONG_TX_SEQUENCE,
 	MBUS_CH_ERR_WRONG_RX_SEQUENCE,
-	MBUS_CH_ERR_WRONG_RESPONSE
+	MBUS_CH_ERR_WRONG_RESPONSE,
+	MBUS_CH_ERR_DEADTIME_WRONG_TIMING
 }
 MBusChanelStatus;
 
@@ -84,37 +85,39 @@ unsigned int MBusHoldingRegisterWrite(	MBusMasterChanel* mbus,
 										unsigned char		slaveAddr,
 										unsigned short		regAddr,
 										unsigned short		regVal,
-										unsigned char* successFlag);
+										unsigned char*		successFlag);
 
-unsigned int MBusCoilsWrite(			MBusMasterChanel* mbus,
+unsigned int MBusCoilsWrite(			MBusMasterChanel*	mbus,
 										unsigned char		slaveAddr,
 										unsigned short		startAddr,
 										unsigned char		coilCount,
-										MBusRegister** coils,
-										unsigned char* coilsBuff,
-										unsigned char* successFlag);
-unsigned int MBusHoldingRegistersWrite(	MBusMasterChanel* mbus,
+										MBusRegister**		coils,
+										unsigned char*		coilsBuff,
+										unsigned char*		successFlag);
+unsigned int MBusHoldingRegistersWrite(	MBusMasterChanel*	mbus,
 										unsigned char		slaveAddr,
 										unsigned short		startAddr,
 										unsigned char		regCount,
-										MBusRegister** holdingRegisters,
-										unsigned char* holdingRegistersBuff,
-										unsigned char* successFlag);
+										MBusRegister**		holdingRegisters,
+										unsigned char*		holdingRegistersBuff,
+										unsigned char*		successFlag);
 
 // external interrupts
 
-void MBusMasterOnTxBytes_IT(			MBusMasterChanel* mbus,
-										unsigned char* data,
-										unsigned char	dataLength);
-void MBusMasterOnException_IT(			MBusMasterChanel* mbus);
+void MBusMasterOnException_EXT(			MBusMasterChanel*	mbus);
 
-void MBusMasterOnRxByte(				MBusMasterChanel* mbus,
-										unsigned char	  byte);
-void MBusMasterOnRxCompleted(			MBusMasterChanel*	mbus);
-void MBusMasterOnTxDeadtime(			MBusMasterChanel* mbus);
-void MBusMasterOnTxBytesEnd(			MBusMasterChanel* mbus);
+void MBusMasterOnTxBytes_EXT(			MBusMasterChanel*	mbus,
+										unsigned char* 		data,
+										unsigned char		dataLength);
+void MBusMasterTxBytesCompleted(		MBusMasterChanel*	mbus);
 
+void MBusMasterRxByte(					MBusMasterChanel*	mbus,
+										unsigned char	 	byte);
+void MBusMasterOnRxReady_EXT(			MBusMasterChanel*	mbus);
+void MBusMasterRxCompleted(				MBusMasterChanel*	mbus);
 
+void MBusMasterOnDeadtimeRestart_EXT(	MBusMasterChanel*	mbus);
+void MBusMasterDeadtimeElapsed(			MBusMasterChanel*	mbus);
 
 typedef struct
 {
@@ -131,11 +134,11 @@ MBusSlaveChanel;
 
 //void MBusSlaveOnException(MBusSlaveChanel* mbus);
 
-void MBusSlaveOnTxBytes_IT(MBusSlaveChanel* mbus,
-	unsigned char* data,
-	unsigned char		dataLength);
-void MBusSlaveOnRxBytes(MBusSlaveChanel* mbus,
-	unsigned char* data,
-	unsigned char dataLength);
+void MBusSlaveOnTxBytes_IT(				MBusSlaveChanel* mbus,
+										unsigned char*	data,
+										unsigned char	dataLength);
+void MBusSlaveOnRxBytes(				MBusSlaveChanel* mbus,
+										unsigned char* data,
+										unsigned char dataLength);
 
 #endif

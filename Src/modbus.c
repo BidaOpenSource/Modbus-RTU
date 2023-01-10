@@ -3,7 +3,7 @@
 #include "modbus_datagram.h"
 #include "modbus_registers.h"
 
-static void	 MBusStartTx(MBusMasterChanel* mbus) { MBusMasterOnTxBytesEnd(mbus); }
+static void	 MBusStartTx(MBusMasterChanel* mbus) { MBusMasterTxBytesCompleted(mbus); }
 
 unsigned int MBusMasterIsReady(MBusMasterChanel* mbus)
 {
@@ -220,34 +220,17 @@ unsigned int MBusHoldingRegistersWrite(	MBusMasterChanel* mbus,
 	return 1;
 }
 
-static char mBusMasterQueryResponseValidate(MBusMasterChanel* mbus)
-{
-	if (mbus->DatagramQuery.SlaveAddress != mbus->DatagramResponse.SlaveAddress)
-		return 0;
-	if (mbus->DatagramQuery.PDU.FunctionCode != mbus->DatagramResponse.SlaveAddress)
-		return 0;
-
-	return 1;
-}
-
-void MBusMasterOnTxDeadtime(MBusMasterChanel* mbus)
-{
-	if (mbus->Status == MBUS_CH_DEADTIME)
-	{
-		mbus->Status = MBUS_CH_READY;
-	}
-}
-void MBusMasterOnTxBytesEnd(MBusMasterChanel* mbus)
+void MBusMasterTxBytesCompleted(		MBusMasterChanel* mbus)
 {
 	switch (mbus->Status)
 	{
 	case MBUS_CH_TX_READY:
+		MBusMasterOnTxBytes_EXT(mbus, (unsigned char *)(&mbus->DatagramQuery.SlaveAddress), 1);
 		mbus->Status = MBUS_CH_ADU_HEADER_TX;
-		MBusMasterOnTxBytes_IT(mbus, (unsigned char *)(&mbus->DatagramQuery.SlaveAddress), 1);
 		break;
 	case MBUS_CH_ADU_HEADER_TX:
+		MBusMasterOnTxBytes_EXT(mbus, (unsigned char *)(&mbus->DatagramQuery.PDU.FunctionCode), 1);
 		mbus->Status = MBUS_CH_PDU_FUNC_CODE_TX;
-		MBusMasterOnTxBytes_IT(mbus, (unsigned char *)(&mbus->DatagramQuery.PDU.FunctionCode), 1);
 		break;
 	case MBUS_CH_PDU_FUNC_CODE_TX:
 		if (mbus->DatagramQuery.PDU.DataHeaderLength == 0)
@@ -255,173 +238,139 @@ void MBusMasterOnTxBytesEnd(MBusMasterChanel* mbus)
 			mbus->Status = MBUS_CH_ERR_UNEXPECTED;
 			break;
 		}
-		else
-			mbus->Status = MBUS_CH_PDU_HEADER_TX;
-		MBusMasterOnTxBytes_IT(mbus, mbus->DatagramQuery.PDU.DataHeader, mbus->DatagramQuery.PDU.DataHeaderLength);
+
+		MBusMasterOnTxBytes_EXT(mbus, mbus->DatagramQuery.PDU.DataHeader, mbus->DatagramQuery.PDU.DataHeaderLength);
+		mbus->Status = MBUS_CH_PDU_HEADER_TX;
 		break;
 	case MBUS_CH_PDU_HEADER_TX:
 		if (mbus->DatagramQuery.PDU.DataLength > 0)
 		{
+			MBusMasterOnTxBytes_EXT(mbus, mbus->DatagramQuery.PDU.Data, mbus->DatagramQuery.PDU.DataLength);
 			mbus->Status = MBUS_CH_PDU_DATA_TX;
-			MBusMasterOnTxBytes_IT(mbus, mbus->DatagramQuery.PDU.Data, mbus->DatagramQuery.PDU.DataLength);
 		}
 		else
 		{
+			MBusMasterOnTxBytes_EXT(mbus, mbus->DatagramQuery.CRC16, 2);
 			mbus->Status = MBUS_CH_ADU_CRC_TX;
-			MBusMasterOnTxBytes_IT(mbus, mbus->DatagramQuery.CRC16, 2);
 		}
 		break;
 	case MBUS_CH_PDU_DATA_TX:
+		MBusMasterOnTxBytes_EXT(mbus, mbus->DatagramQuery.CRC16, 2);
 		mbus->Status = MBUS_CH_ADU_CRC_TX;
-		MBusMasterOnTxBytes_IT(mbus, mbus->DatagramQuery.CRC16, 2);
 		break;
 	case MBUS_CH_ADU_CRC_TX:
-		mbus->Status = MBUS_CH_PENDING_RESPONSE;
+		mbus->Status = MBUS_CH_DEADTIME;
 		break;
 	default:
 		mbus->Status = MBUS_CH_ERR_WRONG_TX_SEQUENCE;
-		MBusMasterOnException_IT(mbus);
+		MBusMasterOnException_EXT(mbus);
 		break;
 	}
 }
 
-void MBusMasterOnRxByte(				MBusMasterChanel* mbus,
+void MBusMasterRxByte(					MBusMasterChanel* mbus,
 										unsigned char	  byte)
 {
-	if (mbus->datagramResponseBytesReceived >= MBUS_MAX_PACKET_LENGTH)
-		return;
-
-	switch (mbus->Status)
+	static unsigned char byteIndex;
+	switch(mbus->Status)
 	{
 	case MBUS_CH_ADU_HEADER_RX:
-		mbus->DatagramResponse.SlaveAddress = byte;
+		MBusSetSlaveAddr(mbus->DatagramResponse, byte);
 		mbus->Status = MBUS_CH_PDU_FUNC_CODE_RX;
 		break;
 	case MBUS_CH_PDU_FUNC_CODE_RX:
-		mbus->DatagramResponse.PDU.FunctionCode = byte;
-
-		datagramResponseStageBytesReceived = 0;
-		switch (mbus->DatagramResponse.PDU.FunctionCode)
-		{
-		case READ_COILS:
-		case READ_DISCRETE_INPUTS:
-		case READ_INPUTS:
-		case READ_HOLDING_REGISTERS:
-			mbus->datagramResponseStageBytesCountdown = 1;
-			break;
-		case WRITE_SINGLE_COIL:
-		case WRITE_SINGLE_HOLDING_REGISTER:
-		case WRITE_MULTIPLE_COILS:
-		case WRITE_MULTIPLE_HOLDING_REGISTERS:
-			mbus->datagramResponseStageBytesCountdown = 4;
-			break;
-		default:
-			mbus->Status = MBUS_CH_ERR_UNEXPECTED;
-			return;
-		}
-
+		MBusSetQueryFunction(mbus->DatagramResponse, (MBusFunction)byte);
 		mbus->Status = MBUS_CH_PDU_HEADER_RX;
+		byteIndex = 0;
 		break;
 	case MBUS_CH_PDU_HEADER_RX:
-		mbus->DatagramResponse.PDU.DataHeader[datagramResponseStageBytesReceived] = byte;
-		mbus->datagramResponseStageBytesReceived++;
-
-		mbus->datagramResponseStageBytesCountdown--;
-		if (!mbus->datagramResponseStageBytesCountdown ||
-				mbus->datagramResponseStageBytesReceived >= MBUS_MAX_PDU_HEADER_LENGTH)
+		if (MBusDatagramHeaderAppend(	mbus->DatagramResponse,
+										byte,
+										byteIndex++))
 		{
-			mbus->datagramResponseStageBytesReceived = 0;
-			switch (mbus->DatagramResponse.PDU.FunctionCode)
-			{
-			case READ_COILS:
-			case READ_DISCRETE_INPUTS:
-			case READ_INPUTS:
-			case READ_HOLDING_REGISTERS:
-				mbus->datagramResponseStageBytesCountdown = MBUS_MAX_PDU_LENGTH;
+			byteIndex = 0;
+			MBusFunction fnc = mbus->DatagramResponse.PDU.FunctionCode;
+			if (fnc == READ_COILS ||
+					fnc == READ_DISCRETE_INPUTS ||
+					fnc == READ_INPUTS ||
+					fnc == READ_HOLDING_REGISTERS)
 				mbus->Status = MBUS_CH_PDU_DATA_RX;
-				break;
-			case WRITE_SINGLE_COIL:
-			case WRITE_SINGLE_HOLDING_REGISTER:
-			case WRITE_MULTIPLE_COILS:
-			case WRITE_MULTIPLE_HOLDING_REGISTERS:
-				mbus->datagramResponseStageBytesCountdown = MBUS_CRC_LENGTH;
+			else
 				mbus->Status = MBUS_CH_ADU_CRC_RX;
-				break;
-			default:
-				mbus->Status = MBUS_CH_ERR_UNEXPECTED;
-				return;
-			}
 		}
 		break;
 	case MBUS_CH_PDU_DATA_RX:
-		if (!mbus->datagramResponseStageBytesCountdown) return;
-
-		mbus->DatagramResponse.PDU.DataHeader[datagramResponseStageBytesReceived] = byte;
-		mbus->datagramResponseStageBytesReceived++;
-		mbus->datagramResponseStageBytesCountdown--;
+		if(MBusDatagramDataAppend(	mbus->DatagramResponse,
+									byte,
+									byteIndex++))
+		{
+			byteIndex = 0;
+			mbus->Status = MBUS_CH_ADU_CRC_RX;
+		}
 		break;
 	case MBUS_CH_ADU_CRC_RX:
-		if (!mbus->datagramResponseStageBytesCountdown) return;
-
-		mbus->DatagramResponse.CRC16[mbus->datagramResponseStageBytesReceived];
-		mbus->datagramResponseStageBytesReceived++;
-		mbus->datagramResponseStageBytesCountdown--;
+		if(MBusDatagramCRCAppend(	mbus->DatagramResponse,
+									byte,
+									byteIndex++))
+		{
+			byteIndex = 0;
+			mbus->Status = MBUS_CH_DEADTIME;
+		}
+		break;
+	default:
+		mbus->Status = MBUS_CH_ERR_WRONG_RESPONSE;
 		break;
 	}
-	default:
-		mbus->Status = MBUS_CH_ERR_WRONG_RX_SEQUENCE;
-		return;
 }
-void MBusMasterOnRxCompleted(			MBusMasterChanel* mbus)
+void MBusMasterRxCompleted(			MBusMasterChanel* mbus)
 {
-	if (mbus->Status != MBUS_CH_PDU_DATA_RX &&
-			mbus->Status != MBUS_CH_ADU_CRC_RX)
+	if (mbus->Status == MBUS_CH_PDU_DATA_RX &&
+			mbus->DatagramResponse.PDU.DataLength >= MBUS_CRC_LENGTH)
 	{
-		mbus->Status = MBUS_CH_ERR_WRONG_RX_SEQUENCE;
-		MBusMasterOnException_IT(mbus);
-		return;
+		mbus->DatagramResponse.PDU.DataLength -= MBUS_CRC_LENGTH;
+
+		unsigned short crc_offset = mbus->DatagramResponse.PDU.DataLength;
+		mbus->DatagramResponse.CRC16[MBUS_JUNIOR_BIT_INDEX] =
+				mbus->DatagramResponse.PDU.Data[crc_offset + MBUS_JUNIOR_BIT_INDEX];
+		mbus->DatagramResponse.CRC16[MBUS_SENIOR_BIT_INDEX] =
+				mbus->DatagramResponse.PDU.Data[crc_offset + MBUS_SENIOR_BIT_INDEX];
+
+		mbus->Status = MBUS_CH_DEADTIME;
 	}
 
-	if (!mBusMasterQueryResponseValidate(mbus))
+	if (mbus->Status != MBUS_CH_DEADTIME)
 	{
-		mbus->Status = MBUS_CH_ERR_WRONG_RESPONSE;
-		MBusMasterOnException_IT(mbus);
+		mbus->Status = MBUS_CH_ERR_DEADTIME_WRONG_TIMING;
 		return;
-	}
-
-	if (mbus->Status == MBUS_CH_PDU_DATA_RX)
-	{
-		mbus->DatagramResponse.PDU.DataLength -= 2;
-		mbus->DatagramResponse.CRC16[0] =
-				mbus->DatagramResponse.PDU.Data[mbus->DatagramResponse.PDU.DataLength];
-		mbus->DatagramResponse.CRC16[1] =
-				mbus->DatagramResponse.PDU.Data[mbus->DatagramResponse.PDU.DataLength + 1];
 	}
 
 	switch (mbus->DatagramResponse.PDU.FunctionCode)
 	{
 	case READ_COILS:
 	case READ_DISCRETE_INPUTS:
-
+		MBusRegistersUnpackDiscrete(	mbus->DatagramResponse.PDU.Data,
+										mbus->DatagramResponse.PDU.DataLength,
+										mbus->ptrResponseStruct);
 		break;
 	case READ_HOLDING_REGISTERS:
 	case READ_INPUTS:
+		MBusRegistersUnpack(			mbus->DatagramResponse.PDU.Data,
+										mbus->DatagramResponse.PDU.DataLength,
+										mbus->ptrResponseStruct);
 		break;
+	case WRITE_SINGLE_COIL: break;
+	case WRITE_SINGLE_HOLDING_REGISTER: break;
+	case WRITE_MULTIPLE_COILS: break;
+	case WRITE_MULTIPLE_HOLDING_REGISTERS: break;
+	default:
+		mbus->Status = MBUS_CH_ERR_WRONG_RESPONSE;
+		return;
 	}
-
-	mbus->Status = MBUS_CH_READY;
 }
 
 void MBusSlaveOnRxBytes(MBusSlaveChanel* mbus,
 	unsigned char* data,
 	unsigned char dataLength)
 {
-	if (mbus->Status != MBUS_CH_PENDING_RESPONSE)
-	{
-		mbus->Status = MBUS_CH_ERR_WRONG_RX_SEQUENCE;
-		;//MBusOnException_IT(mbus);
-		return;
-	}
 
-	MBusDatagramParseQuery(&mbus->Datagram, data, dataLength);
 }
