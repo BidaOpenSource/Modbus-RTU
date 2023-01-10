@@ -23,11 +23,17 @@ typedef enum
 	MBUS_CH_PDU_HEADER_TX,
 	MBUS_CH_PDU_DATA_TX,
 	MBUS_CH_ADU_CRC_TX,
-	MBUS_CH_PENDING_RESPONSE,
+	MBUS_CH_ADU_HEADER_RX,
+	MBUS_CH_PDU_FUNC_CODE_RX,
+	MBUS_CH_PDU_HEADER_RX,
+	MBUS_CH_PDU_DATA_RX,
+	MBUS_CH_ADU_CRC_RX,
+	MBUS_CH_DEADTIME,
 	MBUS_CH_ERR_CRC_CHECK,
 	MBUS_CH_ERR_UNEXPECTED,
 	MBUS_CH_ERR_WRONG_TX_SEQUENCE,
-	MBUS_CH_ERR_WRONG_RX_SEQUENCE
+	MBUS_CH_ERR_WRONG_RX_SEQUENCE,
+	MBUS_CH_ERR_WRONG_RESPONSE
 }
 MBusChanelStatus;
 
@@ -35,7 +41,12 @@ typedef struct
 {
 	MBusChanelStatus	Status;
 
-	MBusADU				Datagram;
+	MBusADU				DatagramQuery;
+
+	unsigned int		datagramResponseLastUpdate_ms;
+	unsigned int		datagramResponseStageBytesReceived;
+	unsigned int		datagramResponseStageBytesCountdown;
+	MBusADU				DatagramResponse;
 
 	void*				ptrResponseStruct;
 }
@@ -97,11 +108,12 @@ void MBusMasterOnTxBytes_IT(			MBusMasterChanel* mbus,
 										unsigned char	dataLength);
 void MBusMasterOnException_IT(			MBusMasterChanel* mbus);
 
-void MBusMasterOnRxBytes(				MBusMasterChanel*	mbus,
-										unsigned char*	data,
-										unsigned char	dataLength); 
+void MBusMasterOnRxByte(				MBusMasterChanel* mbus,
+										unsigned char	  byte);
+void MBusMasterOnRxCompleted(			MBusMasterChanel*	mbus);
 void MBusMasterOnTxDeadtime(			MBusMasterChanel* mbus);
 void MBusMasterOnTxBytesEnd(			MBusMasterChanel* mbus);
+
 
 
 typedef struct
@@ -118,5 +130,12 @@ MBusSlaveChanel;
 //void MBusSlaveOnTransmissionEnd(MBusSlaveChanel* mbus);
 
 //void MBusSlaveOnException(MBusSlaveChanel* mbus);
+
+void MBusSlaveOnTxBytes_IT(MBusSlaveChanel* mbus,
+	unsigned char* data,
+	unsigned char		dataLength);
+void MBusSlaveOnRxBytes(MBusSlaveChanel* mbus,
+	unsigned char* data,
+	unsigned char dataLength);
 
 #endif

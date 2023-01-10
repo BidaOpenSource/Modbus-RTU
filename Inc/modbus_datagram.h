@@ -34,6 +34,10 @@ typedef struct
 }
 MBusPDU;
 
+unsigned short MBusPDUGetRegStartAddr(MBusPDU* pdu);
+unsigned short MBusPDUGetExpectedRegCount(MBusPDU* pdu);
+unsigned short MBusPDUGetRegExpectedValue(MBusPDU* pdu);
+
 typedef struct
 {
 	unsigned char	SlaveAddress;
@@ -72,6 +76,9 @@ void	MBusQueryWriteMultiple(MBusADU* ADU, unsigned short	regAddrStart,
 //		PARSE
 
 void	MBusDatagramParseResponse(	MBusADU* ADU,
+									unsigned char* data,
+									unsigned char		dataLength);
+void	MBusDatagramParseQuery(		MBusADU* ADU,
 									unsigned char* data,
 									unsigned char		dataLength);
 #endif
