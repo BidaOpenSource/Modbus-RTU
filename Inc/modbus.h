@@ -124,8 +124,6 @@ typedef struct
 	MBusChanelStatus	Status;
 
 	MBusADU				Datagram;
-
-	void				(*OnResponse)(unsigned char* data, unsigned char dataLength);
 }
 MBusSlaveChanel;
 

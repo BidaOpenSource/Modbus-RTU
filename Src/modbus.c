@@ -275,16 +275,16 @@ void MBusMasterRxByte(					MBusMasterChanel* mbus,
 	switch(mbus->Status)
 	{
 	case MBUS_CH_ADU_HEADER_RX:
-		MBusSetSlaveAddr(mbus->DatagramResponse, byte);
+		MBusSetSlaveAddr(&(mbus->DatagramResponse), byte);
 		mbus->Status = MBUS_CH_PDU_FUNC_CODE_RX;
 		break;
 	case MBUS_CH_PDU_FUNC_CODE_RX:
-		MBusSetQueryFunction(mbus->DatagramResponse, (MBusFunction)byte);
+		MBusSetQueryFunction(&(mbus->DatagramResponse), (MBusFunction)byte);
 		mbus->Status = MBUS_CH_PDU_HEADER_RX;
 		byteIndex = 0;
 		break;
 	case MBUS_CH_PDU_HEADER_RX:
-		if (MBusDatagramHeaderAppend(	mbus->DatagramResponse,
+		if (MBusDatagramHeaderAppend(	&(mbus->DatagramResponse),
 										byte,
 										byteIndex++))
 		{
@@ -300,7 +300,7 @@ void MBusMasterRxByte(					MBusMasterChanel* mbus,
 		}
 		break;
 	case MBUS_CH_PDU_DATA_RX:
-		if(MBusDatagramDataAppend(	mbus->DatagramResponse,
+		if(MBusDatagramDataAppend(	&(mbus->DatagramResponse),
 									byte,
 									byteIndex++))
 		{
@@ -309,7 +309,7 @@ void MBusMasterRxByte(					MBusMasterChanel* mbus,
 		}
 		break;
 	case MBUS_CH_ADU_CRC_RX:
-		if(MBusDatagramCRCAppend(	mbus->DatagramResponse,
+		if(MBusDatagramCRCAppend(	&(mbus->DatagramResponse),
 									byte,
 									byteIndex++))
 		{
@@ -348,15 +348,15 @@ void MBusMasterRxCompleted(			MBusMasterChanel* mbus)
 	{
 	case READ_COILS:
 	case READ_DISCRETE_INPUTS:
-		MBusRegistersUnpackDiscrete(	mbus->DatagramResponse.PDU.Data,
+		/*MBusRegistersUnpackDiscrete(	mbus->DatagramResponse.PDU.Data,
 										mbus->DatagramResponse.PDU.DataLength,
-										mbus->ptrResponseStruct);
+										mbus->ptrResponseStruct)*/;
 		break;
 	case READ_HOLDING_REGISTERS:
 	case READ_INPUTS:
-		MBusRegistersUnpack(			mbus->DatagramResponse.PDU.Data,
+		/*MBusRegistersUnpack(			mbus->DatagramResponse.PDU.Data,
 										mbus->DatagramResponse.PDU.DataLength,
-										mbus->ptrResponseStruct);
+										mbus->ptrResponseStruct)*/;
 		break;
 	case WRITE_SINGLE_COIL: break;
 	case WRITE_SINGLE_HOLDING_REGISTER: break;

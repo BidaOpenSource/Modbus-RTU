@@ -26,7 +26,6 @@ void MBusCRC16Init() {
 	}
 }
 
-
 unsigned char	MBusCRC16(unsigned short crcVal,
 	unsigned char* data,
 	unsigned char dataLength)

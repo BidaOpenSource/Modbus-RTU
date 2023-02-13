@@ -1,203 +1,122 @@
+#include "modbus_variable.h"
 #include "modbus_registers.h"
 
-#define			bitAddrToByteAddr(bitAddr) (bitAddr / 8)
-#define			bitAddrToBitOffset(bitAddr) (bitAddr % 8)
+#define				bitAddrToByteAddr(bitAddr) (bitAddr / 8)
+#define				bitAddrToBitOffset(bitAddr) (bitAddr % 8)
 
-static MBusRegister* mbusRegSetGetFirst(MBusRegister* regsetItem)
+MBusRegStatus		MBusRegAdd(MBusRegisterSet* regSet, unsigned short regAddr, unsigned int* variablePointer, unsigned int bitMask)
 {
-	if (regsetItem == 0) return 0;
+	if (regSet->RegistersCount >= MBUS_REG_MAX_REGISTERS_IN_REGSET) return MBUS_REG_ERR_UNEXPECTED;
 
-	MBusRegister* currentItem = regsetItem;
-	while (currentItem->RegPrevious != 0)
-		currentItem = currentItem->RegPrevious;
-
-	return currentItem;
+	(regSet->Registers)[(regSet->RegistersCount++)] = MBusVariableInstance(variablePointer, bitMask);
 }
-static MBusRegister* mbusRegSetGetLast(MBusRegister* regsetItem)
+MBusRegStatus		MBusRegRemove(MBusRegisterSet* regSet, unsigned short regAddr)
 {
-	if (regsetItem == 0) return 0;
-
-	MBusRegister* currentItem = regsetItem;
-	while (currentItem->RegNext != 0)
-		currentItem = currentItem->RegNext;
-
-	return currentItem;
-}
-
-static MBusRegister* mbusRegSetGetClosest(MBusRegister** regset, unsigned short addr)
-{
-	if (*regset == 0) return 0;
-	MBusRegister* currentItem = mbusRegSetGetFirst(*regset);
-
-	while (currentItem->RegNext != 0 && currentItem->RegAddress < addr)
-		currentItem = currentItem->RegNext;
-
-	return currentItem;
-}
-
-void	MBusRegisterAdd(MBusRegister* reg, MBusRegister** regset)
-{
-	if (*regset == 0)
+	for (int i = 0; i < regSet->RegistersCount; i++)
 	{
-		*regset = reg;
-		return;
-	}
-
-	MBusRegister* nearestItem = mbusRegSetGetClosest(regset, reg->RegAddress);
-
-	if (nearestItem->RegAddress == reg->RegAddress) return;
-
-	MBusRegister* followingItem = 0;
-	MBusRegister* previousItem = 0;
-
-	if (nearestItem->RegAddress > reg->RegAddress)
-	{
-		followingItem = nearestItem;
-		previousItem = nearestItem->RegPrevious;
-	}
-	if (nearestItem->RegAddress < reg->RegAddress)
-	{
-		followingItem = nearestItem->RegNext;
-		previousItem = nearestItem;
-	}
-
-	reg->RegNext = 0;
-	reg->RegPrevious = 0;
-	if (followingItem != 0)
-	{
-		reg->RegNext = followingItem;
-		followingItem->RegPrevious = reg;
-	}
-	if (previousItem != 0)
-	{
-		reg->RegPrevious = previousItem;
-		previousItem->RegNext = reg;
-	}
-}
-void	MBusRegisterRemove(MBusRegister* reg, MBusRegister** regset)
-{
-	MBusRegister* itemToDelete = mbusRegSetGetClosest(regset, reg->RegAddress);
-	if (itemToDelete == 0) return;
-
-	MBusRegister* followingItem = itemToDelete->RegNext;
-	MBusRegister* previousItem = itemToDelete->RegPrevious;
-
-	itemToDelete->RegNext = 0;
-	itemToDelete->RegPrevious = 0;
-
-	if (previousItem != 0 && followingItem != 0)
-	{
-		followingItem->RegPrevious = previousItem;
-		previousItem->RegNext = followingItem;
-	}
-	else
-	{
-		if (followingItem != 0)
-			followingItem->RegPrevious = 0;
-
-		if (previousItem != 0)
-			previousItem->RegNext = 0;
-	}
-}
-
-unsigned char	MBusRegistersPack(MBusRegister** regset, unsigned short startAddr, unsigned char regsCount, unsigned char* output)
-{
-	unsigned int outputByteCounter = 0;
-
-	MBusRegister* nearestItem = mbusRegSetGetClosest(regset, startAddr);
-	if (nearestItem == 0) return outputByteCounter;
-
-	for (int i = startAddr; i < startAddr + regsCount; i++)
-	{
-		if (nearestItem == 0 || nearestItem->RegAddress != i)
+		if (regSet->Registers[i].Address == regAddr)
 		{
-			output[outputByteCounter] = 0;
-			outputByteCounter++;
-			output[outputByteCounter] = 0;
-			outputByteCounter++;
+			i++;
+			for ( ; i < regSet->RegistersCount; i++)
+			{
+				regSet->Registers[i - 1] = regSet->Registers[i];
+			}
+			regSet->RegistersCount--;
+
+			return MBUS_REG_OK;
+		}
+	}
+
+	return MBUS_INVALID_ADDRESS;
+}
+
+MBusRegStatus		MBusRegGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusVariable* out)
+{
+	for (int i = 0; i < regSet->RegistersCount; i++)
+		if (regSet->Registers[i] == regAddr)
+		{
+			out = &(regSet->Registers[i].Variable);
+			return MBUS_REG_OK;
+		}
+
+	return MBUS_REG_ERR_INVALID_ADDRESS;
+}
+
+MBusRegStatus		MBusRegSetPack16bit(MBusRegisterSet* regSet, unsigned short startAddr, unsigned short regCount, unsigned char* buffer)
+{
+	if (startAddr >= 0xFFFF - regCount) return MBUS_REG_ERR_OUT_OF_BOUNDS;
+
+	int byteCounter = 0;
+
+	MBusVariable* varToPack;
+	unsigned int varValue;
+
+	for (int i = startAddr; i < startAddr + regCount; i++)
+	{
+		if (MBusRegGet(regSet, i, varToPack) == MBUS_REG_OK)
+		{
+			varValue = MBusVariableGet(varToPack);
+			buffer[byteCounter] = varValue & 0x00FF;
+			byteCounter++;
+			buffer[byteCounter] = varValue & 0xFF00;
+			byteCounter++;
 		}
 		else
 		{
-			output[outputByteCounter] = MBusRegisterGet(nearestItem) >> 8;
-			outputByteCounter++;
-			output[outputByteCounter] = MBusRegisterGet(nearestItem);
-			outputByteCounter++;
-			nearestItem = nearestItem->RegNext;
+			return MBUS_REG_ERR_INVALID_ADDRESS;
 		}
 	}
 
-	return outputByteCounter;
+	return MBUS_REG_OK;
 }
-unsigned char	MBusRegistersUnpack(unsigned char* input, unsigned short startAddr, unsigned char regsCount, MBusRegister** regset)
+MBusRegStatus		MBusRegSetUnpack16bit(MBusRegisterSet* regSet, unsigned short startAddr, unsigned short regCount, unsigned char* buffer)
 {
-	unsigned int inputByteCounter = 0;
+	if (startAddr >= 0xFFFF - regCount) return MBUS_REG_ERR_OUT_OF_BOUNDS;
 
-	MBusRegister* nearestItem = mbusRegSetGetClosest(regset, startAddr);
-	if (nearestItem == 0) return inputByteCounter;
+	int byteCounter = 0;
 
-	for (int i = startAddr; i < startAddr + regsCount; i++)
+	MBusVariable* varToUnpack;
+	unsigned int varValue;
+
+	for (int i = startAddr; i < startAddr + regCount; i++)
 	{
-		if (nearestItem != 0 && nearestItem->RegAddress == i)
+		if (MBusRegGet(regSet, i, varToUnpack) == MBUS_REG_OK)
 		{
-			MBusRegisterSet(nearestItem, (input[inputByteCounter] << 8) | (input[inputByteCounter + 1]));
-			nearestItem = nearestItem->RegNext;
-		}
-		inputByteCounter += 2;
-	}
-
-	return bitAddrToByteAddr(inputByteCounter);
-}
-
-unsigned char	MBusRegistersPackDiscrete(MBusRegister** regset, unsigned short startAddr, unsigned char regsCount, unsigned char* output)
-{
-	unsigned int outputBitCounter = 0;
-	unsigned int outputByteCounter = 0;
-
-	MBusRegister* nearestItem = mbusRegSetGetClosest(regset, startAddr);
-	if (nearestItem == 0) return outputByteCounter;
-
-	for (int i = startAddr; i < startAddr + regsCount; i++)
-	{
-		outputByteCounter = bitAddrToByteAddr(outputBitCounter);
-
-		if (nearestItem == 0 || nearestItem->RegAddress != i)
-		{
-			output[outputByteCounter] &= ~(1 << bitAddrToBitOffset(outputBitCounter));
+			varValue =	buffer[byteCounter] &	0x00FF;
+			byteCounter++;
+			varValue |=	buffer[byteCounter] <<	0xF;
+			byteCounter++;
 		}
 		else
 		{
-			output[outputByteCounter] |= (MBusRegisterDiscreteGet(nearestItem) << bitAddrToBitOffset(outputBitCounter));
-			nearestItem = nearestItem->RegNext;
+			return MBUS_REG_ERR_INVALID_ADDRESS;
 		}
-
-		outputBitCounter++;
 	}
 
-	return bitAddrToByteAddr(outputBitCounter);
+	return MBUS_REG_OK;
 }
-unsigned char	MBusRegistersUnpackDiscrete(unsigned char* input, unsigned short startAddr, unsigned char regsCount, MBusRegister** regset)
+
+MBusRegStatus		MBusRegSetPack1bit(MBusRegisterSet* regSet, unsigned short startAddr, unsigned short regCount, unsigned char* buffer)
 {
-	unsigned int inputBitCounter = 0;
-	unsigned int inputByteCounter = 0;
+	if (startAddr >= 0xFFFF - regCount) return MBUS_REG_ERR_OUT_OF_BOUNDS;
 
-	MBusRegister* nearestItem = mbusRegSetGetClosest(regset, startAddr);
-	if (nearestItem == 0) return inputByteCounter;
+	int bitCounter = 0;
 
-	for (int i = startAddr; i < startAddr + regsCount; i++)
+	MBusVariable* varToUnpack;
+	unsigned int varValue;
+
+	for (int i = startAddr; i < startAddr + regCount; i++)
 	{
-		inputByteCounter = bitAddrToByteAddr(inputBitCounter);
-
-		if (nearestItem != 0 && nearestItem->RegAddress == i)
+		if (MBusRegGet(regSet, i, varToUnpack) == MBUS_REG_OK)
 		{
-			if (input[inputByteCounter] & (1 << bitAddrToBitOffset(inputBitCounter)))
-				MBusRegisterDiscreteSet(nearestItem);
-			else
-				MBusRegisterDiscreteReset(nearestItem);
-			nearestItem = nearestItem->RegNext;
 		}
-
-		inputBitCounter++;
+		else
+		{
+			return MBUS_REG_ERR_INVALID_ADDRESS;
+		}
 	}
+}
+MBusRegStatus		MBusRegSetUnpack1bit(MBusRegisterSet* regSet, unsigned short startAddr, unsigned short regCount, unsigned char* buffer)
+{
 
-	return bitAddrToByteAddr(inputBitCounter);
 }
