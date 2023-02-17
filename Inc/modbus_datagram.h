@@ -12,7 +12,7 @@
 #define MBUS_MAX_READ_REGISTERS_LENGTH		125
 #define MBUS_MAX_WRITE_M_DATA_LENGTH		247
 
-typedef enum
+/*typedef enum
 {
 	READ_COILS = 0x01,
 	READ_DISCRETE_INPUTS,
@@ -23,15 +23,15 @@ typedef enum
 	WRITE_MULTIPLE_COILS = 0x0F,
 	WRITE_MULTIPLE_HOLDING_REGISTERS
 }
-MBusFunction;
+MBusFunction;*/
+
+#include "modbus_fnc.h"
 
 typedef struct
 {
-	MBusFunction	FunctionCode;
-	unsigned char	DataHeader[MBUS_MAX_PDU_HEADER_LENGTH];
-	unsigned char	DataHeaderLength;
-	unsigned char*	Data;
-	unsigned char	DataLength;
+	MBusFunctionType	FunctionCode;
+	unsigned char*		Data;
+	unsigned char		DataLength;
 }
 MBusPDU;
 
@@ -49,7 +49,7 @@ MBusADU;
 
 
 void	MBusSetSlaveAddr(MBusADU* ADU, unsigned char slaveAddr);
-void	MBusSetQueryFunction(MBusADU* ADU, MBusFunction fnc);
+void	MBusSetQueryFunction(MBusADU* ADU, MBusFunctionType fnc);
 
 //		REGISTERS READ
 

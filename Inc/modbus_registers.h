@@ -3,7 +3,7 @@
 
 #include "modbus_variable.h"
 
-enum				MBusRegStatus
+typedef enum
 {
 	MBUS_REG_OK,
 	MBUS_REG_ERR_UNEXPECTED,
@@ -11,7 +11,15 @@ enum				MBusRegStatus
 	MBUS_REG_ERR_INVALID_VARIABLE,
 	MBUS_REG_ERR_INVALID_ADDRESS,
 	MBUS_REG_ERR_OUT_OF_BOUNDS
-};
+}
+MBusRegStatus;
+
+typedef struct
+{
+	MBusVariable	Variable;
+	unsigned short	Address;
+}
+MBusRegister;
 
 #define				MBUS_REG_MAX_REGISTERS_IN_REGSET	20
 typedef struct
@@ -21,17 +29,10 @@ typedef struct
 }
 MBusRegisterSet;
 
-typedef struct
-{
-	MBusVariable	Variable;
-	unsigned short	Address;
-}
-MBusRegister;
-
 MBusRegStatus		MBusRegAdd(MBusRegisterSet* regSet, unsigned short regAddr, unsigned int* variablePointer, unsigned int bitMask);
 MBusRegStatus		MBusRegRemove(MBusRegisterSet* regSet, unsigned short regAddr);
 
-MBusRegStatus		MBusRegGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusVariable* out);
+MBusRegStatus		MBusVarGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusVariable** out);
 
 MBusRegStatus		MBusRegSetPack16bit(MBusRegisterSet* regSet, unsigned short startAddr, unsigned short regCount, unsigned char* buffer);
 MBusRegStatus		MBusRegSetUnpack16bit(MBusRegisterSet* regSet, unsigned short startAddr, unsigned short regCount, unsigned char* buffer);
