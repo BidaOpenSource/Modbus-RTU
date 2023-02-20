@@ -13,7 +13,22 @@ static MBusException ExceptionCodeAssign(MBusException exc, unsigned char* array
 
 // 0x01 | READ_COIL (figure 11. MODBUS Application Protocol Specification V1.1b)
 
-static MBusException fncReadCoil(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
+MBusException			FncReadCoilRequest(unsigned short startAddress, unsigned short quantityOfRegs, unsigned char* requestData, unsigned char* requestDataLength)
+{
+	*requestDataLength = 4;
+
+	requestData[0] = startAddress & 0xFF;
+	requestData[1] = (startAddress >> MBUS_BITS_IN_BYTE) & 0xFF;
+
+	requestData[2] = quantityOfRegs & 0xFF;
+	requestData[3] = (quantityOfRegs >> MBUS_BITS_IN_BYTE) & 0xFF;
+
+	if (startAddress < 0x0000 || 0xFFFF < startAddress) return MBUS_EXC_ILLEGAL_DATA_ADDRESS;
+	if (quantityOfRegs < 1 || 0x07D0 < quantityOfRegs) return MBUS_EXC_ILLEGAL_DATA_VALUE;
+
+	return MBUS_EXC_NONE;
+}
+static MBusException	fncReadCoilResponse(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
 {
 	if (requestLength != 4)
 	{
@@ -54,7 +69,22 @@ static MBusException fncReadCoil(unsigned char* request, unsigned char requestLe
 
 // 0x02 | READ_DISCRETE_INPUTS (figure 12. MODBUS Application Protocol Specification V1.1b)
 
-static MBusException fncReadDiscreteInputs(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
+MBusException			FncReadDiscreteInputsRequest(unsigned short startAddress, unsigned short quantityOfRegs, unsigned char* requestData, unsigned char* requestDataLength)
+{
+	*requestDataLength = 4;
+
+	requestData[0] = startAddress & 0xFF;
+	requestData[1] = (startAddress >> MBUS_BITS_IN_BYTE) & 0xFF;
+
+	requestData[2] = quantityOfRegs & 0xFF;
+	requestData[3] = (quantityOfRegs >> MBUS_BITS_IN_BYTE) & 0xFF;
+
+	if (startAddress < 0x0000 || 0xFFFF < startAddress) return MBUS_EXC_ILLEGAL_DATA_ADDRESS;
+	if (quantityOfRegs < 1 || 0x07D0 < quantityOfRegs) return MBUS_EXC_ILLEGAL_DATA_VALUE;
+
+	return MBUS_EXC_NONE;
+}
+static MBusException	fncReadDiscreteInputsResponse(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
 {
 	if (requestLength != 4)
 	{
@@ -95,7 +125,22 @@ static MBusException fncReadDiscreteInputs(unsigned char* request, unsigned char
 
 // 0x03 | READ_HOLDING_REGISTERS (figure 13. MODBUS Application Protocol Specification V1.1b)
 
-static MBusException fncReadHoldingRegisters(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
+MBusException			FncReadHoldingRegistersRequest(unsigned short startAddress, unsigned short quantityOfRegs, unsigned char* requestData, unsigned char* requestDataLength)
+{
+	*requestDataLength = 4;
+
+	requestData[0] = startAddress & 0xFF;
+	requestData[1] = (startAddress >> MBUS_BITS_IN_BYTE) & 0xFF;
+
+	requestData[2] = quantityOfRegs & 0xFF;
+	requestData[3] = (quantityOfRegs >> MBUS_BITS_IN_BYTE) & 0xFF;
+
+	if (startAddress < 0x0000 || 0xFFFF < startAddress) return MBUS_EXC_ILLEGAL_DATA_ADDRESS;
+	if (quantityOfRegs < 1 || 0x007D < quantityOfRegs) return MBUS_EXC_ILLEGAL_DATA_VALUE;
+
+	return MBUS_EXC_NONE;
+}
+static MBusException	fncReadHoldingRegistersResponse(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
 {
 	if (requestLength != 4)
 	{
@@ -135,7 +180,22 @@ static MBusException fncReadHoldingRegisters(unsigned char* request, unsigned ch
 
 // 0x04 | READ_INPUT_REGISTERS (figure 14. MODBUS Application Protocol Specification V1.1b)
 
-static MBusException fncReadInputRegisters(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
+MBusException			FncReadInputRegistersRequest(unsigned short startAddress, unsigned short quantityOfRegs, unsigned char* requestData, unsigned char* requestDataLength)
+{
+	*requestDataLength = 4;
+
+	requestData[0] = startAddress & 0xFF;
+	requestData[1] = (startAddress >> MBUS_BITS_IN_BYTE) & 0xFF;
+
+	requestData[2] = quantityOfRegs & 0xFF;
+	requestData[3] = (quantityOfRegs >> MBUS_BITS_IN_BYTE) & 0xFF;
+
+	if (startAddress < 0x0000 || 0xFFFF < startAddress) return MBUS_EXC_ILLEGAL_DATA_ADDRESS;
+	if (quantityOfRegs < 1 || 0x007D < quantityOfRegs) return MBUS_EXC_ILLEGAL_DATA_VALUE;
+
+	return MBUS_EXC_NONE;
+}
+static MBusException	fncReadInputRegistersResponse(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
 {
 	if (requestLength != 4)
 	{
@@ -173,13 +233,94 @@ static MBusException fncReadInputRegisters(unsigned char* request, unsigned char
 	}
 }
 
-//
+// 0x05 | WRITE_SINGLE_COIL (figure 15. MODBUS Application Protocol Specification V1.1b)
+
+MBusException			FncWriteSingleCoilRequest(unsigned short address, unsigned short value, unsigned char* requestData, unsigned char* requestDataLength)
+{
+	*requestDataLength = 4;
+
+	requestData[0] = address & 0xFF;
+	requestData[1] = (address >> MBUS_BITS_IN_BYTE) & 0xFF;
+
+	requestData[2] = 0x00;
+	requestData[3] = value ? 0xFF : 0x00;
+
+	if (address < 0x0000 || 0xFFFF < address) return MBUS_EXC_ILLEGAL_DATA_ADDRESS;
+
+	return MBUS_EXC_NONE;
+}
+static MBusException	fncWriteSingleCoilResponse(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
+{
+	if (requestLength != 4)
+	{
+		return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_VALUE, response, responseLength);
+	}
+
+	unsigned short requestAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_BITS_IN_BYTE);
+
+	MBusRegStatus result = MBusRegSetUnpack1bit(&Coils, requestAddr, 1, &request[2]);
+	if (result == MBUS_REG_OK) return MBUS_EXC_NONE;
+
+	return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_ADDRESS, response, responseLength);
+}
+
+// 0x06 | WRITE_SINGLE_REGISTER (figure 16. MODBUS Application Protocol Specification V1.1b)
+
+MBusException			FncWriteSingleRegisterRequest(unsigned short address, unsigned short value, unsigned char* requestData, unsigned char* requestDataLength)
+{
+	*requestDataLength = 4;
+
+	requestData[0] = address & 0xFF;
+	requestData[1] = (address >> MBUS_BITS_IN_BYTE) & 0xFF;
+
+	requestData[2] = value & 0xFF;
+	requestData[3] = (value >> MBUS_BITS_IN_BYTE) & 0xFF;
+
+	if (address < 0x0000 || 0xFFFF < address) return MBUS_EXC_ILLEGAL_DATA_ADDRESS;
+
+	return MBUS_EXC_NONE;
+}
+static MBusException	fncWriteSingleRegisterResponse(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
+{
+	if (requestLength != 4)
+	{
+		return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_VALUE, response, responseLength);
+	}
+
+	unsigned short requestAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_BITS_IN_BYTE);
+
+	MBusRegStatus result = MBusRegSetUnpack16bit(&Coils, requestAddr, 1, &request[2]);
+	if (result == MBUS_REG_OK) return MBUS_EXC_NONE;
+
+	return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_ADDRESS, response, responseLength);
+}
+
 
 MBusFunction MBusFunctions[MBUS_FNC_COUNT] =
 {
 	{},
-	{ &fncReadCoil },							// 0x01
-	{ &fncReadDiscreteInputs },					// 0x02
-	{ &fncReadHoldingRegisters },				// 0x03
-	{ &fncReadInputRegisters }					// 0x04
+	{ &fncReadCoilResponse },							// 0x01
+	{ &fncReadDiscreteInputsResponse },					// 0x02
+	{ &fncReadHoldingRegistersResponse },				// 0x03
+	{ &fncReadInputRegistersResponse },					// 0x04
+	{ &fncWriteSingleCoilResponse },					// 0x05
+	{ &fncWriteSingleRegisterResponse },				// 0x06
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{}
 };
