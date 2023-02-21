@@ -7,7 +7,18 @@ MBusException MBusMapCharBuffer(MBusADU* adu, unsigned char* buffer, unsigned ch
 	adu->CRC16 = &buffer[bufferLength - 2];
 
 	adu->PDU.FunctionCode = &buffer[1];
-	adu->PDU.Data = &buffer[2];
+
+	if (*(adu->PDU.FunctionCode) < 127)
+	{
+		adu->PDU.ExceptionCode = 0;
+	}
+	else
+	{
+		adu->PDU.ExceptionCode = &buffer[2];
+		return *(adu->PDU.ExceptionCode);
+	}
+
+	adu->PDU.Data = &(buffer[2]);
 	adu->PDU.DataLength = bufferLength - 2 - 2;
 
 	return MBUS_EXC_NONE;

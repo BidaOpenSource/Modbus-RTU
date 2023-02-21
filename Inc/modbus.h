@@ -19,10 +19,8 @@ typedef struct
 
 	MBusChanelStatus	Status;
 
-	unsigned char		Data[255];
-	unsigned char		DataLength;
-
-	MBusADU				Datagram;
+	MBusADU				DatagramRequest;
+	MBusADU				DatagramResponse;
 
 	void				(*DeadtimeTimerReset)();
 	void				(*DatagramSend)(unsigned char*, unsigned char);
@@ -31,7 +29,11 @@ typedef struct
 }
 MBusChanel;
 
+#define MBusIsMaster(adu)	(!(adu->Address))
+
 void OnDeadtimeElapsed(MBusChanel* mbus);
 void OnByteReceived(MBusChanel* mbus, unsigned char c);
+
+void MBusTest();
 
 #endif
