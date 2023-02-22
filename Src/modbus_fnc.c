@@ -11,9 +11,9 @@ MBusException 			ExceptionCodeAssign(MBusException exc, unsigned char* array, un
 	return exc;
 }
 
-// 0x01 | READ_COIL (figure 11. MODBUS Application Protocol Specification V1.1b)
+// 0x01 | READ_COILS (figure 11. MODBUS Application Protocol Specification V1.1b)
 
-static MBusException	fncReadCoilGenerateRequest(unsigned short* arguments, unsigned char* requestData, unsigned char* requestDataLength)
+static MBusException	fncReadCoilsGenerateRequest(unsigned short* arguments, unsigned char* requestData, unsigned char* requestDataLength)
 {
 	unsigned short startAddress = arguments[0];
 	unsigned short quantityOfRegs = arguments[1];
@@ -31,7 +31,7 @@ static MBusException	fncReadCoilGenerateRequest(unsigned short* arguments, unsig
 
 	return MBUS_EXC_NONE;
 }
-static MBusException	fncReadCoilProcessRequest(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
+static MBusException	fncReadCoilsProcessRequest(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
 {
 	if (requestLength != 4)
 	{
@@ -69,16 +69,25 @@ static MBusException	fncReadCoilProcessRequest(unsigned char* request, unsigned 
 	default:							return ExceptionCodeAssign(MBUS_EXC_SLAVE_DEVICE_FAILURE, response, responseLength);
 	}
 }
-static MBusException	fncReadCoilProcessResponse(unsigned char* response, unsigned char responseLength)
+static MBusException	fncReadCoilsProcessResponse(unsigned char* request, unsigned char* response, unsigned char responseLength)
 {
 	if (responseLength < 2)
 	{
-		return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_VALUE, response, &responseLength);
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
 	}
 
-	unsigned short bitCount = (unsigned short)response[0] * MBUS_BITS_IN_BYTE;
+	unsigned short startAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+	unsigned short regCount = request[2 + MBUS_JUNIOR_BIT_INDEX] | (request[2 + MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
 
-	MBusRegSetPack1bit(&Coils, )
+	if (responseLength * MBUS_BITS_IN_BYTE < regCount)
+	{
+		regCount = responseLength * MBUS_BITS_IN_BYTE;
+	}
+
+	if (MBusRegSetUnpack1bit(&Coils, startAddr, regCount, &(response[1])) != MBUS_REG_OK)
+	{
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
+	}
 
 	return MBUS_REG_OK;
 }
@@ -141,6 +150,28 @@ static MBusException	fncReadDiscreteInputsProcessRequest(unsigned char* request,
 	default:							return ExceptionCodeAssign(MBUS_EXC_SLAVE_DEVICE_FAILURE, response, responseLength);
 	}
 }
+static MBusException	fncReadDiscreteInputsProcessResponse(unsigned char* request, unsigned char* response, unsigned char responseLength)
+{
+	if (responseLength < 1)
+	{
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
+	}
+
+	unsigned short startAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+	unsigned short regCount = request[2 + MBUS_JUNIOR_BIT_INDEX] | (request[2 + MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+
+	if (responseLength * MBUS_BITS_IN_BYTE < regCount)
+	{
+		regCount = responseLength * MBUS_BITS_IN_BYTE;
+	}
+
+	if (MBusRegSetUnpack1bit(&DiscreteInputs, startAddr, regCount, &(response[1])) != MBUS_REG_OK)
+	{
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
+	}
+
+	return MBUS_REG_OK;
+}
 
 // 0x03 | READ_HOLDING_REGISTERS (figure 13. MODBUS Application Protocol Specification V1.1b)
 
@@ -198,6 +229,28 @@ static MBusException	fncReadHoldingRegistersProcessRequest(unsigned char* reques
 	case MBUS_REG_ERR_OUT_OF_BOUNDS:	return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_ADDRESS, response, responseLength);
 	default:							return ExceptionCodeAssign(MBUS_EXC_SLAVE_DEVICE_FAILURE, response, responseLength);
 	}
+}
+static MBusException	fncReadHoldingRegistersProcessResponse(unsigned char* request, unsigned char* response, unsigned char responseLength)
+{
+	if (responseLength < 2)
+	{
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
+	}
+
+	unsigned short startAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+	unsigned short regCount = request[2 + MBUS_JUNIOR_BIT_INDEX] | (request[2 + MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+
+	if (responseLength / MBUS_BYTES_IN_REG < regCount)
+	{
+		regCount = responseLength / MBUS_BYTES_IN_REG;
+	}
+
+	if (MBusRegSetUnpack16bit(&HoldingRegisters, startAddr, regCount, &(response[1])) != MBUS_REG_OK)
+	{
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
+	}
+
+	return MBUS_REG_OK;
 }
 
 // 0x04 | READ_INPUT_REGISTERS (figure 14. MODBUS Application Protocol Specification V1.1b)
@@ -257,6 +310,28 @@ static MBusException	fncReadInputRegistersProcessRequest(unsigned char* request,
 	default:							return ExceptionCodeAssign(MBUS_EXC_SLAVE_DEVICE_FAILURE, response, responseLength);
 	}
 }
+static MBusException	fncReadInputRegistersProcessResponse(unsigned char* request, unsigned char* response, unsigned char responseLength)
+{
+	if (responseLength < 2)
+	{
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
+	}
+
+	unsigned short startAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+	unsigned short regCount = request[2 + MBUS_JUNIOR_BIT_INDEX] | (request[2 + MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+
+	if (responseLength / MBUS_BYTES_IN_REG < regCount)
+	{
+		regCount = responseLength / MBUS_BYTES_IN_REG;
+	}
+
+	if (MBusRegSetUnpack16bit(&InputRegisters, startAddr, regCount, &(response[1])) != MBUS_REG_OK)
+	{
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
+	}
+
+	return MBUS_REG_OK;
+}
 
 // 0x05 | WRITE_SINGLE_COIL (figure 15. MODBUS Application Protocol Specification V1.1b)
 
@@ -291,6 +366,28 @@ static MBusException	fncWriteSingleCoilProcessRequest(unsigned char* request, un
 
 	return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_ADDRESS, response, responseLength);
 }
+static MBusException	fncWriteSingleCoilProcessResponse(unsigned char* request, unsigned char* response, unsigned char responseLength)
+{
+	if (responseLength < 2)
+	{
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
+	}
+
+	unsigned short startAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+	unsigned short regCount = request[2 + MBUS_JUNIOR_BIT_INDEX] | (request[2 + MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+
+	unsigned short startAddrR = response[MBUS_JUNIOR_BIT_INDEX] | (response[MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+	unsigned short regCountR = response[2 + MBUS_JUNIOR_BIT_INDEX] | (response[2 + MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+
+
+	if (startAddr != startAddrR || regCount != regCountR)
+	{
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
+	}
+
+	return MBUS_REG_OK;
+}
+
 
 // 0x06 | WRITE_SINGLE_REGISTER (figure 16. MODBUS Application Protocol Specification V1.1b)
 
@@ -320,18 +417,38 @@ static MBusException	fncWriteSingleRegisterProcessRequest(unsigned char* request
 
 	unsigned short requestAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_BITS_IN_BYTE);
 
-	MBusRegStatus result = MBusRegSetUnpack16bit(&Coils, requestAddr, 1, &request[2]);
+	MBusRegStatus result = MBusRegSetUnpack16bit(&HoldingRegisters, requestAddr, 1, &request[2]);
 	if (result == MBUS_REG_OK) return MBUS_EXC_NONE;
 
 	return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_ADDRESS, response, responseLength);
 }
+static MBusException	fncWriteSingleRegisterProcessResponse(unsigned char* request, unsigned char* response, unsigned char responseLength)
+{
+	if (responseLength < 2)
+	{
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
+	}
 
+	unsigned short startAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+	unsigned short regCount = request[2 + MBUS_JUNIOR_BIT_INDEX] | (request[2 + MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+
+	unsigned short startAddrR = response[MBUS_JUNIOR_BIT_INDEX] | (response[MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+	unsigned short regCountR = response[2 + MBUS_JUNIOR_BIT_INDEX] | (response[2 + MBUS_SENIOR_BIT_INDEX] << MBUS_SENIOR_BIT_SHIFT);
+
+
+	if (startAddr != startAddrR || regCount != regCountR)
+	{
+		return MBUS_EXC_ILLEGAL_DATA_VALUE;
+	}
+
+	return MBUS_REG_OK;
+}
 
 MBusFunction MBusFunctions[MBUS_FNC_COUNT] =
 {
 	{},
-	{ MBUS_FNC_ENABLED, &fncReadCoilGenerateRequest,			&fncReadCoilProcessRequest },				// 0x01
-	{ MBUS_FNC_ENABLED, &fncReadDiscreteInputsGenerateRequest,	&fncReadDiscreteInputsProcessRequest },		// 0x02
+	{ MBUS_FNC_ENABLED, &fncReadCoilsGenerateRequest,			&fncReadCoilsProcessRequest,				&fncReadCoilsProcessResponse },				// 0x01
+	{ MBUS_FNC_ENABLED, &fncReadDiscreteInputsGenerateRequest,	&fncReadDiscreteInputsProcessRequest ... },		// 0x02
 	{ MBUS_FNC_ENABLED, &fncReadHoldingRegistersGenerateRequest,&fncReadHoldingRegistersProcessRequest },	// 0x03
 	{ MBUS_FNC_ENABLED, &fncReadInputRegistersGenerateRequest,	&fncReadInputRegistersProcessRequest },		// 0x04
 	{ MBUS_FNC_ENABLED, &fncWriteSingleCoilGenerateRequest,		&fncWriteSingleCoilProcessRequest },		// 0x05

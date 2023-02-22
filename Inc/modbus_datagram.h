@@ -31,4 +31,3 @@ MBusADU;
 MBusException MBusMapCharBuffer(MBusADU* adu, unsigned char* buffer, unsigned char bufferLength);
 
 #endif
-
