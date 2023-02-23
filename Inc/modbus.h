@@ -34,7 +34,6 @@ MBusChanel;
 void OnDeadtimeElapsed(MBusChanel* mbus);
 void OnByteReceived(MBusChanel* mbus, unsigned char c);
 
-void MBusTestSlaveToMaster();
-void MBusTestMasterToSlave();
+void MBusTest();
 
 #endif

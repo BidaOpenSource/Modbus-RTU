@@ -2,6 +2,7 @@
 #include "modbus_datagram.h"
 #include "modbus_map.h"
 #include "modbus_fnc.h"
+#include "modbus_crc16.h"
 #include "modbus.h"
 
 static void onException(MBusChanel* mbus, MBusException exc)
@@ -115,12 +116,38 @@ void OnByteReceived(MBusChanel* mbus, unsigned char c)
 	}
 }
 
+void MBusReadCoils(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum)
+{
+	if (!MBusIsMaster(mbus)) { onException(mbus, MBUS_EXC_UNEXPECTED); return; }
+
+	MBusMapCharBufferHeader(&(mbus->DatagramRequest));
+
+	unsigned short args[2] = { startAddr, coilsNum };
+	MBusFunctions[MBUS_FNC_READ_COILS].GenerateRequest(args, mbus->DatagramRequest.PDU.Data, &(mbus->DatagramRequest.PDU.DataLength));
+
+	unsigned short crc16 = MBusCRC16(MODBUS_CRC_START, mbus->DatagramRequest.Data, mbus->DatagramRequest.DataLength);
+	MBusMapCharBufferFooter(&(mbus->DatagramRequest), crc16);
+
+	mbus->Status = MBUS_CHANEL_STATUS_TX;
+
+	if (mbus->DatagramSend != 0) (*mbus->DatagramSend)(mbus->DatagramRequest.Data, mbus->DatagramRequest.DataLength);
+}
+
 MBusChanel ch1;
 unsigned int x = 11111;
+
+void MBusTestRegisterCreate()
+{
+	MBusRegAdd(&Coils, 266, &x, 0b00001000);
+}
+
+void MBusTestGenerateRequest()
+{
+	MBusReadCoils(&ch1, 2, 266, 1);
+}
+
 void MBusTestMasterToSlave()
 {
-	MBusRegAdd(&HoldingRegisters, 266, &x, 0xFFFF);
-
 	ch1.Status = MBUS_CHANEL_STATUS_RX;
 
 	OnByteReceived(&ch1, 2);	// addr
@@ -150,5 +177,13 @@ void MBusTestSlaveToMaster()
 	OnByteReceived(&ch1, 0);
 	OnByteReceived(&ch1, 0);
 
-	OnDeadTimeElapsed(&ch1);
+	OnDeadtimeElapsed(&ch1);
+}
+
+void MBusTest()
+{
+	MBusTestRegisterCreate();
+	MBusTestGenerateRequest();
+	MBusTestMasterToSlave();
+	MBusTestSlaveToMaster();
 }

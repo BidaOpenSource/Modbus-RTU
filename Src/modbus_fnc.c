@@ -448,11 +448,11 @@ MBusFunction MBusFunctions[MBUS_FNC_COUNT] =
 {
 	{},
 	{ MBUS_FNC_ENABLED, &fncReadCoilsGenerateRequest,			&fncReadCoilsProcessRequest,				&fncReadCoilsProcessResponse },				// 0x01
-	{ MBUS_FNC_ENABLED, &fncReadDiscreteInputsGenerateRequest,	&fncReadDiscreteInputsProcessRequest ... },		// 0x02
-	{ MBUS_FNC_ENABLED, &fncReadHoldingRegistersGenerateRequest,&fncReadHoldingRegistersProcessRequest },	// 0x03
-	{ MBUS_FNC_ENABLED, &fncReadInputRegistersGenerateRequest,	&fncReadInputRegistersProcessRequest },		// 0x04
-	{ MBUS_FNC_ENABLED, &fncWriteSingleCoilGenerateRequest,		&fncWriteSingleCoilProcessRequest },		// 0x05
-	{ MBUS_FNC_ENABLED, &fncWriteSingleRegisterGenerateRequest,	&fncWriteSingleRegisterProcessRequest },	// 0x06
+	{ MBUS_FNC_ENABLED, &fncReadDiscreteInputsGenerateRequest,	&fncReadDiscreteInputsProcessRequest,		&fncReadDiscreteInputsProcessResponse },		// 0x02
+	{ MBUS_FNC_ENABLED, &fncReadHoldingRegistersGenerateRequest,&fncReadHoldingRegistersProcessRequest, 	&fncReadHoldingRegistersProcessResponse },	// 0x03
+	{ MBUS_FNC_ENABLED, &fncReadInputRegistersGenerateRequest,	&fncReadInputRegistersProcessRequest,		&fncReadInputRegistersProcessResponse },		// 0x04
+	{ MBUS_FNC_ENABLED, &fncWriteSingleCoilGenerateRequest,		&fncWriteSingleCoilProcessRequest,			&fncWriteSingleCoilProcessResponse },		// 0x05
+	{ MBUS_FNC_ENABLED, &fncWriteSingleRegisterGenerateRequest,	&fncWriteSingleRegisterProcessRequest,		&fncWriteSingleRegisterProcessResponse },	// 0x06
 	{},
 	{},
 	{},

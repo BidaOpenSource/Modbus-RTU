@@ -30,4 +30,7 @@ MBusADU;
 
 MBusException MBusMapCharBuffer(MBusADU* adu, unsigned char* buffer, unsigned char bufferLength);
 
+MBusException MBusMapCharBufferHeader(MBusADU* adu);
+MBusException MBusMapCharBufferFooter(MBusADU* adu, unsigned short crc16);
+
 #endif
