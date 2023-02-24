@@ -34,6 +34,14 @@ MBusChanel;
 void OnDeadtimeElapsed(MBusChanel* mbus);
 void OnByteReceived(MBusChanel* mbus, unsigned char c);
 
+void MBusReadCoils(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum);
+void MBusReadDiscreteInputs(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum);
+void MBusReadHoldingRegisters(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum);
+void MBusReadInputRegisters(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum);
+
+void MBusWriteSingleCoil(MBusChanel* mbus, unsigned char slaveAddr, unsigned short addr, unsigned short value);
+void MBusWriteSingleRegister(MBusChanel* mbus, unsigned char slaveAddr, unsigned short addr, unsigned short value);
+
 void MBusTest();
 
 #endif

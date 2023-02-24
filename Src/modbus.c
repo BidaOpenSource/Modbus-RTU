@@ -35,65 +35,71 @@ static MBusException fncProcessResponse(MBusChanel* mbus)
 
 void OnDeadtimeElapsed(MBusChanel* mbus)
 {
+	// elapsed deadtime after packet to send is generated
 	if (mbus->Status == MBUS_CHANEL_STATUS_TX)
 	{
 		if (mbus->DatagramSend == 0) return;
+
+		mbus->Status = MBUS_CHANEL_STATUS_RX;
 
 		if (MBusIsMaster(mbus))	(*mbus->DatagramSend)(mbus->DatagramRequest.Data, mbus->DatagramRequest.DataLength);
 		else					(*mbus->DatagramSend)(mbus->DatagramResponse.Data, mbus->DatagramResponse.DataLength);
 
 		return;
 	}
-
-	if (MBusIsMaster(mbus))
-	{
-		if (MBusMapCharBuffer(	&(mbus->DatagramResponse),
-								mbus->DatagramResponse.Data,
-								mbus->DatagramResponse.DataLength) != MBUS_EXC_NONE)
-		{
-			onException(mbus, *(mbus->DatagramResponse.PDU.ExceptionCode));
-			return;
-		}
-
-		//	RESPONSE ADDRESS MUST BE EQUAL TO THE REQUEST ADDRESS
-		if (MBusGetDatagramAddress(mbus->DatagramResponse.Data) != *(mbus->DatagramRequest.SlaveAddress))
-		{
-			onException(mbus, MBUS_EXC_UNEXPECTED);
-			return;
-		}
-
-		if (!MBusFunctionSupported(*(mbus->DatagramRequest.PDU.FunctionCode)))
-		{
-			ExceptionCodeAssign(MBUS_EXC_ILLEGAL_FUNCTION, mbus->DatagramResponse.Data, &(mbus->DatagramResponse.DataLength));
-			onException(mbus, MBUS_EXC_ILLEGAL_FUNCTION);
-			return;
-		}
-
-		MBusException fncResult = fncProcessResponse(mbus);
-		if (fncResult != MBUS_EXC_NONE) { onException(mbus, fncResult);	return;	}
-	}
+	// elapsed deadtime after master generated packet to send
 	else
 	{
-		if (MBusMapCharBuffer(	&(mbus->DatagramRequest),
-								mbus->DatagramRequest.Data,
-								mbus->DatagramRequest.DataLength) != MBUS_EXC_NONE)
+		if (MBusIsMaster(mbus))
 		{
-			onException(mbus, *(mbus->DatagramRequest.PDU.ExceptionCode));
-			return;
-		}
+			if (MBusMapCharBuffer(	&(mbus->DatagramResponse),
+									mbus->DatagramResponse.Data,
+									mbus->DatagramResponse.DataLength) != MBUS_EXC_NONE)
+			{
+				onException(mbus, *(mbus->DatagramResponse.PDU.ExceptionCode));
+				return;
+			}
 
-		if (MBusGetDatagramAddress(mbus->DatagramRequest.Data) != mbus->Address) { return; }
+			//	RESPONSE ADDRESS MUST BE EQUAL TO THE REQUEST ADDRESS
+			if (MBusGetDatagramAddress(mbus->DatagramResponse.Data) != *(mbus->DatagramRequest.SlaveAddress))
+			{
+				onException(mbus, MBUS_EXC_UNEXPECTED);
+				return;
+			}
 
-		if (!MBusFunctionSupported(*(mbus->DatagramRequest.PDU.FunctionCode)))
-		{
-			ExceptionCodeAssign(MBUS_EXC_ILLEGAL_FUNCTION, mbus->DatagramResponse.Data, &(mbus->DatagramResponse.DataLength));
-			onException(mbus, MBUS_EXC_ILLEGAL_FUNCTION);
+			if (!MBusFunctionSupported(*(mbus->DatagramRequest.PDU.FunctionCode)))
+			{
+				ExceptionCodeAssign(MBUS_EXC_ILLEGAL_FUNCTION, mbus->DatagramResponse.Data, &(mbus->DatagramResponse.DataLength));
+				onException(mbus, MBUS_EXC_ILLEGAL_FUNCTION);
+				return;
+			}
+
+			MBusException fncResult = fncProcessResponse(mbus);
+			if (fncResult != MBUS_EXC_NONE) { onException(mbus, fncResult);	return;	}
 		}
 		else
 		{
-			MBusException fncResult = fncProcessRequest(mbus);
+			if (MBusMapCharBuffer(	&(mbus->DatagramRequest),
+									mbus->DatagramRequest.Data,
+									mbus->DatagramRequest.DataLength) != MBUS_EXC_NONE)
+			{
+				onException(mbus, *(mbus->DatagramRequest.PDU.ExceptionCode));
+				return;
+			}
 
-			if (fncResult != MBUS_EXC_NONE) { onException(mbus, fncResult); }
+			if (MBusGetDatagramAddress(mbus->DatagramRequest.Data) != mbus->Address) { return; }
+
+			if (!MBusFunctionSupported(*(mbus->DatagramRequest.PDU.FunctionCode)))
+			{
+				ExceptionCodeAssign(MBUS_EXC_ILLEGAL_FUNCTION, mbus->DatagramResponse.Data, &(mbus->DatagramResponse.DataLength));
+				onException(mbus, MBUS_EXC_ILLEGAL_FUNCTION);
+			}
+			else
+			{
+				MBusException fncResult = fncProcessRequest(mbus);
+
+				if (fncResult != MBUS_EXC_NONE) { onException(mbus, fncResult); }
+			}
 		}
 	}
 }
@@ -118,7 +124,8 @@ void OnByteReceived(MBusChanel* mbus, unsigned char c)
 
 void MBusReadCoils(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum)
 {
-	if (!MBusIsMaster(mbus)) { onException(mbus, MBUS_EXC_UNEXPECTED); return; }
+	/*if (!MBusIsMaster(mbus)) { onException(mbus, MBUS_EXC_UNEXPECTED); return; }
+	if (mbus->Status != MBUS_CHANEL_STATUS_IDLE) return;
 
 	MBusMapCharBufferHeader(&(mbus->DatagramRequest));
 
@@ -130,9 +137,15 @@ void MBusReadCoils(MBusChanel* mbus, unsigned char slaveAddr, unsigned short sta
 
 	mbus->Status = MBUS_CHANEL_STATUS_TX;
 
-	if (mbus->DatagramSend != 0) (*mbus->DatagramSend)(mbus->DatagramRequest.Data, mbus->DatagramRequest.DataLength);
+	if (mbus->DeadtimeTimerReset != 0) (*mbus->DeadtimeTimerReset)();*/
 }
+void MBusReadDiscreteInputs(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum) {}
+void MBusReadHoldingRegisters(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum) {}
+void MBusReadInputRegisters(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum) {}
 
+void MBusWriteSingleCoil(MBusChanel* mbus, unsigned char slaveAddr, unsigned short addr, unsigned short value) {}
+void MBusWriteSingleRegister(MBusChanel* mbus, unsigned char slaveAddr, unsigned short addr, unsigned short value) {}
+/*
 MBusChanel ch1;
 unsigned int x = 11111;
 
@@ -187,3 +200,4 @@ void MBusTest()
 	MBusTestMasterToSlave();
 	MBusTestSlaveToMaster();
 }
+*/
