@@ -1,3 +1,4 @@
+#include "modbus_global.h"
 #include "modbus_variable.h"
 #include "modbus_registers.h"
 
@@ -34,6 +35,7 @@ MBusRegStatus		MBusVarGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusV
 
 MBusRegStatus		MBusRegAdd(MBusRegisterSet* regSet, unsigned short regAddr, unsigned int* variablePointer, unsigned int bitMask)
 {
+#ifdef MODBUS_REGISTERS_ENABLED
 	if (regSet->RegistersCount >= MBUS_REG_MAX_REGISTERS_IN_REGSET) return MBUS_REG_ERR_UNEXPECTED;
 
 	MBusRegister* regRef = (MBusRegister*)(&(regSet->Registers[(regSet->RegistersCount)++]));
@@ -41,11 +43,13 @@ MBusRegStatus		MBusRegAdd(MBusRegisterSet* regSet, unsigned short regAddr, unsig
 
 	MBusVariable* varRef = (MBusVariable*)(&(regRef->Variable));
 	*varRef = MBusVariableInstance(variablePointer, bitMask);
+#endif
 
 	return MBUS_REG_OK;
 }
 MBusRegStatus		MBusRegRemove(MBusRegisterSet* regSet, unsigned short regAddr)
 {
+#ifdef MODBUS_REGISTERS_ENABLED
 	MBusRegister regRef;
 
 	for (int i = 0; i < regSet->RegistersCount; i++)
@@ -64,6 +68,40 @@ MBusRegStatus		MBusRegRemove(MBusRegisterSet* regSet, unsigned short regAddr)
 	}
 
 	return MBUS_REG_ERR_INVALID_VARIABLE;
+#else
+	return MBUS_REG_OK;
+#endif
+}
+
+
+typedef union
+{
+	unsigned int* byteset;
+	float*		  	value;
+}
+mbusFloat;
+
+MBusRegStatus		MBusRegAddFloat(MBusRegisterSet* regSet, unsigned short regAddr, float* variablePointer)
+{
+#ifdef MODBUS_REGISTERS_ENABLED
+	if (regSet->RegistersCount >= MBUS_REG_MAX_REGISTERS_IN_REGSET - 4) return MBUS_REG_ERR_UNEXPECTED;
+
+	mbusFloat f = (mbusFloat) { .value = variablePointer };
+
+	for (int i = 0; i < 2; i++)
+	{
+		for (int o = 0; o < 2; o++)
+		{
+			MBusRegister* regRef = (MBusRegister*)(&(regSet->Registers[(regSet->RegistersCount)++]));
+			regRef->Address = regAddr;
+			MBusVariable* varRef = (MBusVariable*)(&(regRef->Variable));
+			*varRef = MBusVariableInstance(&(f.byteset[i]), 0xFFFF);
+			varRef->Offset = o * MBUS_BITS_IN_BYTE * MBUS_BYTES_IN_REG;
+		}
+	}
+#endif
+
+	return MBUS_REG_OK;
 }
 
 MBusRegStatus		MBusRegSetPack16bit(MBusRegisterSet* regSet, unsigned short startAddr, unsigned short regCount, unsigned char* buffer)

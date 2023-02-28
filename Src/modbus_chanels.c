@@ -14,10 +14,10 @@ void		MBusChanelsInit()
 		// UNFINISHED
 	};
 
-	MBusPC = (MBusChanel)
+	/*MBusPC = (MBusChanel)
 	{
 		.Address = 0x01,
 		.Status = MBUS_CHANEL_STATUS_
 		// UNFINISHED
-	};
+	};*/
 }

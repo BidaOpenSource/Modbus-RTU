@@ -1,6 +1,8 @@
 #ifndef MODBUS_REGISTERS_H
 #define MODBUS_REGISTERS_H
 
+#define	MODBUS_REGISTERS_ENABLED
+
 #include "modbus_variable.h"
 
 typedef enum
@@ -21,7 +23,7 @@ typedef struct
 }
 MBusRegister;
 
-#define				MBUS_REG_MAX_REGISTERS_IN_REGSET	20
+#define				MBUS_REG_MAX_REGISTERS_IN_REGSET	100
 typedef struct
 {
 	unsigned short	RegistersCount;
@@ -31,6 +33,7 @@ MBusRegisterSet;
 
 MBusRegStatus		MBusRegAdd(MBusRegisterSet* regSet, unsigned short regAddr, unsigned int* variablePointer, unsigned int bitMask);
 MBusRegStatus		MBusRegRemove(MBusRegisterSet* regSet, unsigned short regAddr);
+MBusRegStatus		MBusRegAddFloat(MBusRegisterSet* regSet, unsigned short regAddr, float* variablePointer);
 
 MBusRegStatus		MBusVarGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusVariable** out);
 
