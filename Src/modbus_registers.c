@@ -76,7 +76,7 @@ MBusRegStatus		MBusRegRemove(MBusRegisterSet* regSet, unsigned short regAddr)
 
 typedef union
 {
-	unsigned int* byteset;
+	unsigned short* shortset;
 	float*		  	value;
 }
 mbusFloat;
@@ -84,21 +84,12 @@ mbusFloat;
 MBusRegStatus		MBusRegAddFloat(MBusRegisterSet* regSet, unsigned short regAddr, float* variablePointer)
 {
 #ifdef MODBUS_REGISTERS_ENABLED
-	if (regSet->RegistersCount >= MBUS_REG_MAX_REGISTERS_IN_REGSET - 4) return MBUS_REG_ERR_UNEXPECTED;
+	if (regSet->RegistersCount >= MBUS_REG_MAX_REGISTERS_IN_REGSET - 2) return MBUS_REG_ERR_UNEXPECTED;
 
 	mbusFloat f = (mbusFloat) { .value = variablePointer };
 
-	for (int i = 0; i < 2; i++)
-	{
-		for (int o = 0; o < 2; o++)
-		{
-			MBusRegister* regRef = (MBusRegister*)(&(regSet->Registers[(regSet->RegistersCount)++]));
-			regRef->Address = regAddr;
-			MBusVariable* varRef = (MBusVariable*)(&(regRef->Variable));
-			*varRef = MBusVariableInstance(&(f.byteset[i]), 0xFFFF);
-			varRef->Offset = o * MBUS_BITS_IN_BYTE * MBUS_BYTES_IN_REG;
-		}
-	}
+	MBusRegAdd(regSet, regAddr + 0, (unsigned int*)&(f.shortset[0]), 0xFFFF);
+	MBusRegAdd(regSet, regAddr + 1, (unsigned int*)&(f.shortset[1]), 0xFFFF);
 #endif
 
 	return MBUS_REG_OK;

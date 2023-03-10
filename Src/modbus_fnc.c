@@ -398,11 +398,11 @@ static MBusException	fncWriteSingleRegisterGenerateRequest(unsigned short* argum
 
 	*requestDataLength = 4;
 
-	requestData[0] = address & 0xFF;
-	requestData[1] = (address >> MBUS_BITS_IN_BYTE) & 0xFF;
+	requestData[0] = (address >> MBUS_SENIOR_BIT_SHIFT) & 0xFF;
+	requestData[1] = (address >> MBUS_JUNIOR_BIT_SHIFT) & 0xFF;
 
-	requestData[2] = value & 0xFF;
-	requestData[3] = (value >> MBUS_BITS_IN_BYTE) & 0xFF;
+	requestData[2] = (value >> MBUS_SENIOR_BIT_SHIFT) & 0xFF;
+	requestData[3] = (value >> MBUS_JUNIOR_BIT_SHIFT) & 0xFF;
 
 	if (address < 0x0000 || 0xFFFF < address) return MBUS_EXC_ILLEGAL_DATA_ADDRESS;
 
@@ -447,28 +447,10 @@ static MBusException	fncWriteSingleRegisterProcessResponse(unsigned char* reques
 MBusFunction MBusFunctions[MBUS_FNC_COUNT] =
 {
 	{},
-	{ MBUS_FNC_ENABLED, &fncReadCoilsGenerateRequest,			&fncReadCoilsProcessRequest,				&fncReadCoilsProcessResponse },				// 0x01
+	{ MBUS_FNC_ENABLED, &fncReadCoilsGenerateRequest,			&fncReadCoilsProcessRequest,				&fncReadCoilsProcessResponse },					// 0x01
 	{ MBUS_FNC_ENABLED, &fncReadDiscreteInputsGenerateRequest,	&fncReadDiscreteInputsProcessRequest,		&fncReadDiscreteInputsProcessResponse },		// 0x02
-	{ MBUS_FNC_ENABLED, &fncReadHoldingRegistersGenerateRequest,&fncReadHoldingRegistersProcessRequest, 	&fncReadHoldingRegistersProcessResponse },	// 0x03
+	{ MBUS_FNC_ENABLED, &fncReadHoldingRegistersGenerateRequest,&fncReadHoldingRegistersProcessRequest, 	&fncReadHoldingRegistersProcessResponse },		// 0x03
 	{ MBUS_FNC_ENABLED, &fncReadInputRegistersGenerateRequest,	&fncReadInputRegistersProcessRequest,		&fncReadInputRegistersProcessResponse },		// 0x04
-	{ MBUS_FNC_ENABLED, &fncWriteSingleCoilGenerateRequest,		&fncWriteSingleCoilProcessRequest,			&fncWriteSingleCoilProcessResponse },		// 0x05
-	{ MBUS_FNC_ENABLED, &fncWriteSingleRegisterGenerateRequest,	&fncWriteSingleRegisterProcessRequest,		&fncWriteSingleRegisterProcessResponse },	// 0x06
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{},
-	{}
+	{ MBUS_FNC_ENABLED, &fncWriteSingleCoilGenerateRequest,		&fncWriteSingleCoilProcessRequest,			&fncWriteSingleCoilProcessResponse },			// 0x05
+	{ MBUS_FNC_ENABLED, &fncWriteSingleRegisterGenerateRequest,	&fncWriteSingleRegisterProcessRequest,		&fncWriteSingleRegisterProcessResponse },		// 0x06
 };

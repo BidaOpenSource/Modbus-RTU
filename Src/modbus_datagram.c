@@ -3,10 +3,10 @@
 
 MBusException MBusMapCharBuffer(MBusADU* adu, unsigned char* buffer, unsigned char bufferLength)
 {
-	adu->SlaveAddress = &buffer[0];
-	adu->CRC16 = &buffer[bufferLength - 2];
-
+	adu->SlaveAddress =		&buffer[0];
 	adu->PDU.FunctionCode = &buffer[1];
+
+	adu->CRC16 =			&buffer[bufferLength - 2];
 
 	if (*(adu->PDU.FunctionCode) < 127)
 	{
@@ -26,10 +26,10 @@ MBusException MBusMapCharBuffer(MBusADU* adu, unsigned char* buffer, unsigned ch
 
 MBusException MBusMapCharBufferHeader(MBusADU* adu)
 {
-	adu->SlaveAddress = &(adu->Data[0]);
+	adu->SlaveAddress =		&(adu->Data[0]);
 	adu->PDU.FunctionCode = &(adu->Data[1]);
 
-	adu->PDU.Data = &(adu->Data[2]);
+	adu->PDU.Data =			&(adu->Data[2]);
 
 	adu->DataLength = 2;
 

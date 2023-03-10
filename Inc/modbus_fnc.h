@@ -12,7 +12,8 @@ MBusFunctionStatus;
 
 typedef struct
 {
-	MBusFunctionStatus Status;
+	MBusFunctionStatus					Status;
+
 	MBusException	(*GenerateRequest)(	unsigned short* arguments,
 										unsigned char* 	requestData,
 										unsigned char*  requestDataLength);

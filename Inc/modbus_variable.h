@@ -5,7 +5,7 @@ typedef struct
 {
 	unsigned int*	VariablePointer;
 	unsigned int	BitMask;
-	unsigned int	Offset;
+	unsigned char	Offset;
 }
 MBusVariable;
 

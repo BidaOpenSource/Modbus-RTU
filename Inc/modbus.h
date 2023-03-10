@@ -9,7 +9,7 @@ typedef enum
 	MBUS_CHANEL_STATUS_IDLE,
 	MBUS_CHANEL_STATUS_RX,
 	MBUS_CHANEL_STATUS_TX,
-	MBUS_CHANEL_STATUS_PROCESSING
+	MBUS_CHANEL_STATUS_TX_DEADTIME
 }
 MBusChanelStatus;
 
@@ -23,25 +23,24 @@ typedef struct
 	MBusADU				DatagramResponse;
 
 	void				(*DeadtimeTimerReset)();
+
+	void				(*WatchdogTimerReset)();
+	void				(*WatchdogTimerStop)();
+
 	void				(*DatagramSend)(unsigned char*, unsigned char);
 
-	void				(*OnException)(MBusException);
+	void				(*OnTransactionCompleted)(MBusException);
 }
 MBusChanel;
 
 #define MBusIsMaster(adu)	(!(adu->Address))
 
-void OnDeadtimeElapsed(MBusChanel* mbus);
-void OnByteReceived(MBusChanel* mbus, unsigned char c);
+void MBusOnWatchdogElapsed(MBusChanel* mbus);
+void MBusOnDeadtimeElapsed(MBusChanel* mbus);
 
-void MBusReadCoils(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum);
-void MBusReadDiscreteInputs(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum);
-void MBusReadHoldingRegisters(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum);
-void MBusReadInputRegisters(MBusChanel* mbus, unsigned char slaveAddr, unsigned short startAddr, unsigned short coilsNum);
+void MBusOnByteReceived(MBusChanel* mbus, unsigned char c);
+void MBusOnDatagramTransmitted(MBusChanel* mbus);
 
-void MBusWriteSingleCoil(MBusChanel* mbus, unsigned char slaveAddr, unsigned short addr, unsigned short value);
-void MBusWriteSingleRegister(MBusChanel* mbus, unsigned char slaveAddr, unsigned short addr, unsigned short value);
-
-void MBusTest();
+MBusException MBusRequest(MBusChanel* chanel, unsigned char slaveAddr, MBusFunctionType fnc, unsigned short* arguments);
 
 #endif
