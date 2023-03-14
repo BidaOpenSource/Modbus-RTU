@@ -109,9 +109,9 @@ MBusRegStatus		MBusRegSetPack16bit(MBusRegisterSet* regSet, unsigned short start
 		if (MBusVarGet(regSet, i, &varToPack) == MBUS_REG_OK)
 		{
 			varValue = MBusVariableGet(varToPack);
-			buffer[byteCounter] = varValue & 0x00FF;
+			buffer[byteCounter] = (varValue >> MBUS_BITS_IN_BYTE) & 0xFF;
 			byteCounter++;
-			buffer[byteCounter] = varValue & 0xFF00;
+			buffer[byteCounter] = (varValue) & 0xFF;
 			byteCounter++;
 		}
 		else
@@ -135,9 +135,9 @@ MBusRegStatus		MBusRegSetUnpack16bit(MBusRegisterSet* regSet, unsigned short sta
 	{
 		if (MBusVarGet(regSet, i, &varToUnpack) == MBUS_REG_OK)
 		{
-			varValue =	buffer[byteCounter] &	0x00FF;
+			varValue =	(buffer[byteCounter] << MBUS_BITS_IN_BYTE);
 			byteCounter++;
-			varValue |=	buffer[byteCounter] <<	0xF;
+			varValue |=	(buffer[byteCounter] & 0xFF);
 			byteCounter++;
 
 			MBusVariableSet(varToUnpack, varValue);

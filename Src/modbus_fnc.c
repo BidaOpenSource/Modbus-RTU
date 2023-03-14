@@ -195,6 +195,7 @@ static MBusException	fncReadHoldingRegistersGenerateRequest(unsigned short* argu
 }
 static MBusException	fncReadHoldingRegistersProcessRequest(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
 {
+	// tested
 	if (requestLength != 4)
 	{
 		return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_VALUE, response, responseLength);
@@ -213,11 +214,12 @@ static MBusException	fncReadHoldingRegistersProcessRequest(unsigned char* reques
 		return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_VALUE, response, responseLength);
 	}
 
-	MBusRegStatus regOpResult =	MBusRegSetPack16bit(&HoldingRegisters, requestStartAddr, requestQuantityOfRegs, response);
+	MBusRegStatus regOpResult =	MBusRegSetPack16bit(&HoldingRegisters, requestStartAddr, requestQuantityOfRegs, &(response[1]));
 
 	if (regOpResult == MBUS_REG_OK)
 	{
-		*responseLength = requestQuantityOfRegs * MBUS_BYTES_IN_REG;
+		response[0] = requestQuantityOfRegs * 2;
+		*responseLength = requestQuantityOfRegs * MBUS_BYTES_IN_REG + 1;
 
 		return MBUS_EXC_NONE;
 	}
@@ -410,6 +412,7 @@ static MBusException	fncWriteSingleRegisterGenerateRequest(unsigned short* argum
 }
 static MBusException	fncWriteSingleRegisterProcessRequest(unsigned char* request, unsigned char requestLength, unsigned char* response, unsigned char* responseLength)
 {
+	// tested
 	if (requestLength != 4)
 	{
 		return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_VALUE, response, responseLength);
@@ -418,6 +421,10 @@ static MBusException	fncWriteSingleRegisterProcessRequest(unsigned char* request
 	unsigned short requestAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_BITS_IN_BYTE);
 
 	MBusRegStatus result = MBusRegSetUnpack16bit(&HoldingRegisters, requestAddr, 1, &request[2]);
+
+	for (int i = 0; i < 4; i++) response[i] = request[i];
+	*responseLength = 4;
+
 	if (result == MBUS_REG_OK) return MBUS_EXC_NONE;
 
 	return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_ADDRESS, response, responseLength);
@@ -446,7 +453,7 @@ static MBusException	fncWriteSingleRegisterProcessResponse(unsigned char* reques
 
 MBusFunction MBusFunctions[MBUS_FNC_COUNT] =
 {
-	{},
+	{ 0, 0, 0, 0 },
 	{ MBUS_FNC_ENABLED, &fncReadCoilsGenerateRequest,			&fncReadCoilsProcessRequest,				&fncReadCoilsProcessResponse },					// 0x01
 	{ MBUS_FNC_ENABLED, &fncReadDiscreteInputsGenerateRequest,	&fncReadDiscreteInputsProcessRequest,		&fncReadDiscreteInputsProcessResponse },		// 0x02
 	{ MBUS_FNC_ENABLED, &fncReadHoldingRegistersGenerateRequest,&fncReadHoldingRegistersProcessRequest, 	&fncReadHoldingRegistersProcessResponse },		// 0x03
