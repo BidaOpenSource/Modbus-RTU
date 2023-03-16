@@ -38,7 +38,17 @@ MBusRegStatus		MBusRegAdd(MBusRegisterSet* regSet, unsigned short regAddr, unsig
 #ifdef MODBUS_REGISTERS_ENABLED
 	if (regSet->RegistersCount >= MBUS_REG_MAX_REGISTERS_IN_REGSET) return MBUS_REG_ERR_UNEXPECTED;
 
-	MBusRegister* regRef = (MBusRegister*)(&(regSet->Registers[(regSet->RegistersCount)++]));
+	MBusRegister* regRef;
+
+	for (int i = 0; i < regSet->RegistersCount; i++)
+	{
+		regRef = &((regSet->Registers)[i]);
+
+		if (regRef == 0) break;
+		if (regRef->Variable.VariablePointer == variablePointer) return MBUS_REG_OK;
+	}
+
+	regRef = (MBusRegister*)(&(regSet->Registers[(regSet->RegistersCount)++]));
 	regRef->Address = regAddr;
 
 	MBusVariable* varRef = (MBusVariable*)(&(regRef->Variable));

@@ -43,5 +43,6 @@ void MBusOnByteReceived(MBusChanel* mbus, unsigned char c);
 void MBusOnDatagramTransmitted(MBusChanel* mbus);
 
 MBusException MBusRequest(MBusChanel* chanel, unsigned char slaveAddr, MBusFunctionType fnc, unsigned short* arguments);
+void MBusReset(MBusChanel* chanel);
 
 #endif

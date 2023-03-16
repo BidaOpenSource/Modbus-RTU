@@ -182,11 +182,11 @@ static MBusException	fncReadHoldingRegistersGenerateRequest(unsigned short* argu
 
 	*requestDataLength = 4;
 
-	requestData[0] = startAddress & 0xFF;
-	requestData[1] = (startAddress >> MBUS_BITS_IN_BYTE) & 0xFF;
+	requestData[0] = (startAddress >> MBUS_BITS_IN_BYTE) & 0xFF;
+	requestData[1] = startAddress & 0xFF;
 
-	requestData[2] = quantityOfRegs & 0xFF;
-	requestData[3] = (quantityOfRegs >> MBUS_BITS_IN_BYTE) & 0xFF;
+	requestData[2] = (quantityOfRegs >> MBUS_BITS_IN_BYTE) & 0xFF;
+	requestData[3] = quantityOfRegs & 0xFF;
 
 	if (startAddress < 0x0000 || 0xFFFF < startAddress) return MBUS_EXC_ILLEGAL_DATA_ADDRESS;
 	if (quantityOfRegs < 1 || 0x007D < quantityOfRegs) return MBUS_EXC_ILLEGAL_DATA_VALUE;

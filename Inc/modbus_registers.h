@@ -23,7 +23,7 @@ typedef struct
 }
 MBusRegister;
 
-#define				MBUS_REG_MAX_REGISTERS_IN_REGSET	1
+#define				MBUS_REG_MAX_REGISTERS_IN_REGSET	200
 typedef struct
 {
 	unsigned short	RegistersCount;

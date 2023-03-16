@@ -47,6 +47,7 @@ void MBusOnDeadtimeElapsed(MBusChanel* mbus)
 	if (mbus->Status == MBUS_CHANEL_STATUS_TX_DEADTIME)
 	{
 		mbus->Status = MBUS_CHANEL_STATUS_RX;
+		if (mbus->WatchdogTimerReset != 0) (*mbus->WatchdogTimerReset)();
 		return;
 	}
 
@@ -78,10 +79,13 @@ void MBusOnDeadtimeElapsed(MBusChanel* mbus)
 		}
 
 		MBusException fncResult = fncProcessResponse(mbus);
-		if (fncResult != MBUS_EXC_NONE) { onTransactionCompleted(mbus, fncResult);	return;	}
+		onTransactionCompleted(mbus, fncResult);
 	}
 	else
 	{
+		mbus->DatagramRequest.DataLength = 0;
+		mbus->DatagramResponse.DataLength = 0;
+
 		if (MBusMapCharBuffer(	&(mbus->DatagramRequest),
 								mbus->DatagramRequest.Data,
 								mbus->DatagramRequest.DataLength) != MBUS_EXC_NONE)
@@ -119,15 +123,12 @@ void MBusOnDeadtimeElapsed(MBusChanel* mbus)
 		if (fncResult != MBUS_EXC_NONE) *(mbus->DatagramResponse.PDU.FunctionCode) |= (1 << 8);
 		if (mbus->DatagramSend != 0) (*mbus->DatagramSend)(mbus->DatagramResponse.Data, mbus->DatagramResponse.DataLength);
 
-		mbus->DatagramRequest.DataLength = 0;
-		mbus->DatagramResponse.DataLength = 0;
-
 		onTransactionCompleted(mbus, fncResult);
 	}
 }
 void MBusOnByteReceived(MBusChanel* mbus, unsigned char c)
 {
-	if (mbus->Status == MBUS_CHANEL_STATUS_RX)
+	if (mbus->Status == MBUS_CHANEL_STATUS_RX || mbus->Status == MBUS_CHANEL_STATUS_TX_DEADTIME)
 	{
 		if (MBusIsMaster(mbus))
 		{
@@ -151,8 +152,6 @@ void MBusOnDatagramTransmitted(MBusChanel* mbus)
 	mbus->Status = MBUS_CHANEL_STATUS_TX_DEADTIME;
 
 	if (mbus->DeadtimeTimerReset != 0) (*mbus->DeadtimeTimerReset)();
-
-	if (MBusIsMaster(mbus) && mbus->WatchdogTimerReset != 0) (*mbus->WatchdogTimerReset)();
 }
 
 MBusException MBusRequest(MBusChanel* chanel, unsigned char slaveAddr, MBusFunctionType fnc, unsigned short* arguments)
@@ -185,4 +184,18 @@ MBusException MBusRequest(MBusChanel* chanel, unsigned char slaveAddr, MBusFunct
 															chanel->DatagramRequest.DataLength);
 
 	return MBUS_EXC_NONE;
+}
+
+void MBusReset(MBusChanel* mbus)
+{
+	if (MBusIsMaster(mbus))
+	{
+		mbus->Status = MBUS_CHANEL_STATUS_IDLE;
+		if (mbus->WatchdogTimerStop) (*mbus->WatchdogTimerStop)();
+	}
+	else
+		mbus->Status = MBUS_CHANEL_STATUS_RX;
+
+	mbus->DatagramRequest.DataLength = 0;
+	mbus->DatagramResponse.DataLength = 0;
 }
