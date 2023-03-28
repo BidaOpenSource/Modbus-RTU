@@ -73,6 +73,7 @@ MBusRegStatus		MBusRegRemove(MBusRegisterSet* regSet, unsigned short regAddr)
 			{
 				regSet->Registers[i - 1] = regSet->Registers[i];
 			}
+			regSet->RegistersCount--;
 			return MBUS_REG_OK;
 		}
 	}

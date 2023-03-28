@@ -83,7 +83,6 @@ void MBusOnDeadtimeElapsed(MBusChanel* mbus)
 	}
 	else
 	{
-		mbus->DatagramRequest.DataLength = 0;
 		mbus->DatagramResponse.DataLength = 0;
 
 		if (MBusMapCharBuffer(	&(mbus->DatagramRequest),
@@ -91,39 +90,43 @@ void MBusOnDeadtimeElapsed(MBusChanel* mbus)
 								mbus->DatagramRequest.DataLength) != MBUS_EXC_NONE)
 		{
 			onTransactionCompleted(mbus, *(mbus->DatagramRequest.PDU.ExceptionCode));
+			mbus->DatagramRequest.DataLength = 0;
 			return;
 		}
 
-		if (MBusGetDatagramAddress(mbus->DatagramRequest.Data) != mbus->Address) { return; }
-
-		MBusMapCharBufferHeader(&(mbus->DatagramResponse));
-		*(mbus->DatagramResponse.SlaveAddress) = mbus->Address;
-		*(mbus->DatagramResponse.PDU.FunctionCode) = *(mbus->DatagramRequest.PDU.FunctionCode);
-
-		MBusException fncResult;
-		if (!MBusFunctionSupported(*(mbus->DatagramRequest.PDU.FunctionCode)))
+		if (MBusGetDatagramAddress(mbus->DatagramRequest.Data) == mbus->Address)
 		{
-			fncResult = MBUS_EXC_ILLEGAL_FUNCTION;
-			*(mbus->DatagramResponse.PDU.FunctionCode) |= 0b10000000;
-			ExceptionCodeAssign(MBUS_EXC_ILLEGAL_FUNCTION, mbus->DatagramResponse.PDU.Data, &(mbus->DatagramResponse.PDU.DataLength));
-		}
-		else
-		{
-			fncResult = fncProcessRequest(mbus);
-		}
+			MBusMapCharBufferHeader(&(mbus->DatagramResponse));
+			*(mbus->DatagramResponse.SlaveAddress) = mbus->Address;
+			*(mbus->DatagramResponse.PDU.FunctionCode) = *(mbus->DatagramRequest.PDU.FunctionCode);
 
-		unsigned short crc16 = MBusCRC16(	MODBUS_CRC_START,
-											mbus->DatagramResponse.Data,
-											mbus->DatagramResponse.DataLength +
-											mbus->DatagramResponse.PDU.DataLength);
+			MBusException fncResult;
+			if (!MBusFunctionSupported(*(mbus->DatagramRequest.PDU.FunctionCode)))
+			{
+				fncResult = MBUS_EXC_ILLEGAL_FUNCTION;
+				*(mbus->DatagramResponse.PDU.FunctionCode) |= 0b10000000;
+				ExceptionCodeAssign(MBUS_EXC_ILLEGAL_FUNCTION, mbus->DatagramResponse.PDU.Data, &(mbus->DatagramResponse.PDU.DataLength));
+			}
+			else
+			{
+				fncResult = fncProcessRequest(mbus);
+			}
 
-		MBusMapCharBufferFooter(			&(mbus->DatagramResponse),
+			unsigned short crc16 = MBusCRC16(	MODBUS_CRC_START,
+												mbus->DatagramResponse.Data,
+												mbus->DatagramResponse.DataLength +
+												mbus->DatagramResponse.PDU.DataLength);
+
+			MBusMapCharBufferFooter(			&(mbus->DatagramResponse),
 											crc16);
 
-		if (fncResult != MBUS_EXC_NONE) *(mbus->DatagramResponse.PDU.FunctionCode) |= (1 << 8);
-		if (mbus->DatagramSend != 0) (*mbus->DatagramSend)(mbus->DatagramResponse.Data, mbus->DatagramResponse.DataLength);
+			if (fncResult != MBUS_EXC_NONE) *(mbus->DatagramResponse.PDU.FunctionCode) |= (1 << 8);
+			if (mbus->DatagramSend != 0) (*mbus->DatagramSend)(mbus->DatagramResponse.Data, mbus->DatagramResponse.DataLength);
 
-		onTransactionCompleted(mbus, fncResult);
+			onTransactionCompleted(mbus, fncResult);
+		}
+
+		mbus->DatagramRequest.DataLength = 0;
 	}
 }
 void MBusOnByteReceived(MBusChanel* mbus, unsigned char c)
@@ -136,11 +139,15 @@ void MBusOnByteReceived(MBusChanel* mbus, unsigned char c)
 
 			if (mbus->DatagramResponse.DataLength < MBUS_DATAGRAM_MAX_LENGTH)
 				mbus->DatagramResponse.Data[mbus->DatagramResponse.DataLength++] = c;
+			else
+				mbus->DatagramResponse.DataLength = 0;
 		}
 		else
 		{
 			if (mbus->DatagramRequest.DataLength < MBUS_DATAGRAM_MAX_LENGTH)
 				mbus->DatagramRequest.Data[mbus->DatagramRequest.DataLength++] = c;
+			else
+				mbus->DatagramRequest.DataLength = 0;
 		}
 
 		if (mbus->DeadtimeTimerReset != 0) (*mbus->DeadtimeTimerReset)();
