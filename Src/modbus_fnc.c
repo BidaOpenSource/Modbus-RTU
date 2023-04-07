@@ -288,6 +288,9 @@ static MBusException	fncReadInputRegistersProcessRequest(unsigned char* request,
 	unsigned short requestStartAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_BITS_IN_BYTE);
 	unsigned short requestQuantityOfRegs = request[MBUS_JUNIOR_BIT_INDEX + 2] | (request[MBUS_SENIOR_BIT_INDEX + 2] << MBUS_BITS_IN_BYTE);
 
+	if (requestStartAddr == 10200)
+		requestStartAddr = 10200;
+
 	if (requestStartAddr < 0x0000 || requestStartAddr > 0xFFFF)
 	{
 		return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_ADDRESS, response, responseLength);

@@ -5,38 +5,118 @@
 #define				bitAddrToByteAddr(bitAddr) (bitAddr / 8)
 #define				bitAddrToBitOffset(bitAddr) (bitAddr % 8)
 
-MBusRegStatus		MBusRegGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusRegister** out)
+void				MBusRegsetSort(MBusRegisterSet* regSet)
 {
-	MBusRegister* regRef = 0;
+	int j, nn, n;
 
+	n = regSet->RegistersCount;
+
+	do
+	{
+		nn = 0;
+		for (j = 1; j < n; ++j)
+			if (regSet->Registers[j - 1].Address >
+				regSet->Registers[j].Address)
+			{
+				MBusRegister temp;
+				temp = (regSet->Registers)[j - 1];
+				regSet->Registers[j - 1] = regSet->Registers[j];
+				regSet->Registers[j] = temp;
+
+				nn = j;
+			}
+		n = nn;
+
+	} while (n);
+
+	regSet->IsSorted = 1;
+}
+
+MBusRegStatus		MBusRegSearch(MBusRegisterSet* regSet, unsigned short regAddr, MBusRegister** out)
+{
 	for (int i = 0; i < regSet->RegistersCount; i++)
 	{
-		regRef = &((regSet->Registers)[i]);
-
-		if (regRef->Address == regAddr)
+		if (regSet->Registers[i].Address == regAddr)
 		{
-			*out = regRef;
+			*out = &(regSet->Registers[i]);
 			return MBUS_REG_OK;
 		}
 	}
 
 	return MBUS_REG_ERR_INVALID_ADDRESS;
 }
+MBusRegStatus		MBusRegGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusRegister** out)
+{
+    int lo = 0, hi = regSet->RegistersCount - 1;
+    int mid;
+
+    while (hi - lo > 1) {
+        mid = (hi + lo) / 2;
+        if (regSet->Registers[mid].Address < regAddr) {
+            lo = mid + 1;
+        }
+        else {
+            hi = mid;
+        }
+    }
+    if (regSet->Registers[lo].Address == regAddr) {
+    	*out = &(regSet->Registers[lo]);
+    	return MBUS_REG_OK;
+    }
+    else if (regSet->Registers[hi].Address == regAddr) {
+        *out = &(regSet->Registers[hi]);
+    	return MBUS_REG_OK;
+    }
+    else {
+        return MBUS_REG_ERR_INVALID_ADDRESS;
+    }
+}/*
+MBusRegStatus		MBusRegGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusRegister** out)
+{
+	if (!regSet->IsSorted) return MBUS_REG_ERR_UNSORTED;
+	if (!regSet->RegistersCount) return MBUS_REG_ERR_INVALID_ADDRESS;
+
+	MBusRegister* regRef = 0;
+
+	int div = regSet->RegistersCount;
+	int i = div / 2;
+
+	while (div)
+	{
+		div /= 2;
+
+		regRef = &(regSet->Registers[i]);
+
+		if (regRef->Address == regAddr)
+		{
+			*out = regRef;
+			return MBUS_REG_OK;
+		}
+
+		if (regRef->Address > regAddr)
+			i -= div;
+		else
+			i += div;
+	}
+
+	return MBUS_REG_ERR_INVALID_ADDRESS;
+}
+*/
 MBusRegStatus		MBusVarGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusVariable** out)
 {
 	MBusRegister* regRef = 0;
 
-	if (MBusRegGet(regSet, regAddr, &regRef) != MBUS_REG_OK) return MBUS_REG_ERR_INVALID_ADDRESS;
+	MBusRegStatus result = MBusRegGet(regSet, regAddr, &regRef);
+	if (result == MBUS_REG_OK)
+		*out = &(regRef->Variable);
 
-	*out = &(regRef->Variable);
-
-	return MBUS_REG_OK;
+	return result;
 }
 
 MBusRegStatus		MBusRegAdd(MBusRegisterSet* regSet, unsigned short regAddr, unsigned int* variablePointer, unsigned int bitMask)
 {
 #ifdef MODBUS_REGISTERS_ENABLED
-	if (regSet->RegistersCount >= MBUS_REG_MAX_REGISTERS_IN_REGSET) return MBUS_REG_ERR_UNEXPECTED;
+	if (regSet->RegistersCount >= regSet->RegistersLimit) return MBUS_REG_ERR_OVERFLOW;
 
 	MBusRegister* regRef;
 
@@ -53,6 +133,8 @@ MBusRegStatus		MBusRegAdd(MBusRegisterSet* regSet, unsigned short regAddr, unsig
 
 	MBusVariable* varRef = (MBusVariable*)(&(regRef->Variable));
 	*varRef = MBusVariableInstance(variablePointer, bitMask);
+
+	regSet->IsSorted = 0;
 #endif
 
 	return MBUS_REG_OK;
@@ -95,7 +177,7 @@ mbusFloat;
 MBusRegStatus		MBusRegAddFloat(MBusRegisterSet* regSet, unsigned short regAddr, float* variablePointer)
 {
 #ifdef MODBUS_REGISTERS_ENABLED
-	if (regSet->RegistersCount >= MBUS_REG_MAX_REGISTERS_IN_REGSET - 2) return MBUS_REG_ERR_UNEXPECTED;
+	if (regSet->RegistersCount >= regSet->RegistersLimit - 2) return MBUS_REG_ERR_OVERFLOW;
 
 	mbusFloat f = (mbusFloat) { .value = variablePointer };
 

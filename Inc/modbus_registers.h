@@ -12,7 +12,9 @@ typedef enum
 	MBUS_REG_ERR_ALREADY_EXISTS,
 	MBUS_REG_ERR_INVALID_VARIABLE,
 	MBUS_REG_ERR_INVALID_ADDRESS,
-	MBUS_REG_ERR_OUT_OF_BOUNDS
+	MBUS_REG_ERR_OUT_OF_BOUNDS,
+	MBUS_REG_ERR_OVERFLOW,
+	MBUS_REG_ERR_UNSORTED
 }
 MBusRegStatus;
 
@@ -23,13 +25,16 @@ typedef struct
 }
 MBusRegister;
 
-#define				MBUS_REG_MAX_REGISTERS_IN_REGSET	100
 typedef struct
 {
+	unsigned int	IsSorted;
 	unsigned short	RegistersCount;
-	MBusRegister 	Registers[MBUS_REG_MAX_REGISTERS_IN_REGSET];
+	unsigned short	RegistersLimit;
+	MBusRegister* 	Registers;
 }
 MBusRegisterSet;
+
+void				MBusRegsetSort(MBusRegisterSet* regSet);
 
 MBusRegStatus		MBusRegAdd(MBusRegisterSet* regSet, unsigned short regAddr, unsigned int* variablePointer, unsigned int bitMask);
 MBusRegStatus		MBusRegRemove(MBusRegisterSet* regSet, unsigned short regAddr);
