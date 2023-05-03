@@ -132,12 +132,15 @@ static MBusException	fncReadDiscreteInputsProcessRequest(unsigned char* request,
 		return ExceptionCodeAssign(MBUS_EXC_ILLEGAL_DATA_VALUE, response, responseLength);
 	}
 
-	MBusRegStatus regOpResult =	MBusRegSetPack1bit(&DiscreteInputs, requestStartAddr, requestQuantityOfRegs, response);
+	MBusRegStatus regOpResult =	MBusRegSetPack1bit(&DiscreteInputs, requestStartAddr, requestQuantityOfRegs, &response[1]);
 
 	if (regOpResult == MBUS_REG_OK)
 	{
 		*responseLength = requestQuantityOfRegs / MBUS_BITS_IN_BYTE;
 		if (requestQuantityOfRegs % MBUS_BITS_IN_BYTE != 0) *responseLength += 1;
+
+		*responseLength = *responseLength + 1;
+		response[0] = *responseLength - 1;
 
 		return MBUS_EXC_NONE;
 	}

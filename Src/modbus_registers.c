@@ -125,7 +125,9 @@ MBusRegStatus		MBusRegAdd(MBusRegisterSet* regSet, unsigned short regAddr, unsig
 		regRef = &((regSet->Registers)[i]);
 
 		if (regRef == 0) break;
-		if (regRef->Variable.VariablePointer == variablePointer) return MBUS_REG_OK;
+		if (regRef->Variable.VariablePointer == variablePointer &&
+				regRef->Variable.BitMask == bitMask)
+			return MBUS_REG_OK;
 	}
 
 	regRef = (MBusRegister*)(&(regSet->Registers[(regSet->RegistersCount)++]));
@@ -247,11 +249,15 @@ MBusRegStatus		MBusRegSetUnpack16bit(MBusRegisterSet* regSet, unsigned short sta
 MBusRegStatus		MBusRegSetPack1bit(MBusRegisterSet* regSet, unsigned short startAddr, unsigned short regCount, unsigned char* buffer)
 {
 	if (startAddr >= 0xFFFF - regCount) return MBUS_REG_ERR_OUT_OF_BOUNDS;
+	if (regCount == 0) return MBUS_REG_ERR_INVALID_ADDRESS;
 
 	int bitCounter = 0;
 
 	MBusVariable* varToPack = 0;
 	unsigned int varValue;
+
+	for (int i = 0; i < regCount / 8 + 1; i++)
+		buffer[i] = 0;
 
 	for (int i = startAddr; i < startAddr + regCount; i++)
 	{
