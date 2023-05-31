@@ -70,38 +70,8 @@ MBusRegStatus		MBusRegGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusR
     else {
         return MBUS_REG_ERR_INVALID_ADDRESS;
     }
-}/*
-MBusRegStatus		MBusRegGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusRegister** out)
-{
-	if (!regSet->IsSorted) return MBUS_REG_ERR_UNSORTED;
-	if (!regSet->RegistersCount) return MBUS_REG_ERR_INVALID_ADDRESS;
-
-	MBusRegister* regRef = 0;
-
-	int div = regSet->RegistersCount;
-	int i = div / 2;
-
-	while (div)
-	{
-		div /= 2;
-
-		regRef = &(regSet->Registers[i]);
-
-		if (regRef->Address == regAddr)
-		{
-			*out = regRef;
-			return MBUS_REG_OK;
-		}
-
-		if (regRef->Address > regAddr)
-			i -= div;
-		else
-			i += div;
-	}
-
-	return MBUS_REG_ERR_INVALID_ADDRESS;
 }
-*/
+
 MBusRegStatus		MBusVarGet(MBusRegisterSet* regSet, unsigned short regAddr, MBusVariable** out)
 {
 	MBusRegister* regRef = 0;

@@ -475,6 +475,10 @@ static MBusException	fncWriteMultipleRegistersProcessRequest(unsigned char* requ
 	}
 
 	unsigned short requestStartAddr = request[MBUS_JUNIOR_BIT_INDEX] | (request[MBUS_SENIOR_BIT_INDEX] << MBUS_BITS_IN_BYTE);
+
+	if (requestStartAddr == 10300)
+		;
+
 	unsigned short requestQuantity = request[MBUS_JUNIOR_BIT_INDEX + 2] | (request[MBUS_SENIOR_BIT_INDEX + 2] << MBUS_BITS_IN_BYTE);
 
 	unsigned short byteCount = request[4];
